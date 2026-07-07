@@ -1,0 +1,5 @@
+[build]
+  command = "npm run build"
+  publish = "dist"
+
+# Use the existing `public/_redirects` for SPA routing (already present)

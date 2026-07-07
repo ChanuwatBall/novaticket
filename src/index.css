@@ -1,0 +1,160 @@
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@300;400;500;600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --brand-navy: #0E3268;
+    --brand-blue: #1268B3;
+    --brand-mid-blue: #144986;
+    --brand-orange: #F37021;
+    --brand-light-orange: #F68A46;
+    --brand-gradient: linear-gradient(135deg, #1268B3 0%, #144986 52%, #F37021 100%);
+
+    --background: 212 48% 98%;
+    --foreground: 216 76% 16%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 216 76% 16%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 216 76% 16%;
+
+    --primary: 207 82% 39%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 207 52% 94%;
+    --secondary-foreground: 216 76% 23%;
+
+    --muted: 207 34% 94%;
+    --muted-foreground: 216 30% 42%;
+
+    --accent: 23 91% 94%;
+    --accent-foreground: 213 74% 30%;
+
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 207 33% 86%;
+    --input: 207 33% 86%;
+    --ring: 207 82% 39%;
+
+    --radius: 0.75rem;
+
+    --sidebar-background: 212 48% 98%;
+    --sidebar-foreground: 216 76% 23%;
+    --sidebar-primary: 207 82% 39%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 207 52% 94%;
+    --sidebar-accent-foreground: 216 76% 23%;
+    --sidebar-border: 207 33% 86%;
+    --sidebar-ring: 207 82% 39%;
+
+    --success: 142 76% 36%;
+    --success-foreground: 0 0% 100%;
+    --warning: 38 92% 50%;
+    --warning-foreground: 0 0% 100%;
+  }
+
+  .dark {
+    --background: 216 76% 8%;
+    --foreground: 0 0% 95%;
+
+    --card: 216 62% 12%;
+    --card-foreground: 0 0% 95%;
+
+    --popover: 216 62% 12%;
+    --popover-foreground: 0 0% 95%;
+
+    --primary: 207 82% 47%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 216 48% 18%;
+    --secondary-foreground: 0 0% 90%;
+
+    --muted: 216 42% 18%;
+    --muted-foreground: 207 20% 68%;
+
+    --accent: 23 64% 18%;
+    --accent-foreground: 23 91% 62%;
+
+    --destructive: 0 62% 30%;
+    --destructive-foreground: 0 0% 95%;
+
+    --border: 216 36% 24%;
+    --input: 216 36% 24%;
+    --ring: 207 82% 47%;
+
+    --sidebar-background: 216 62% 12%;
+    --sidebar-foreground: 0 0% 90%;
+    --sidebar-primary: 207 82% 47%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 216 48% 18%;
+    --sidebar-accent-foreground: 0 0% 90%;
+    --sidebar-border: 216 36% 24%;
+    --sidebar-ring: 207 82% 47%;
+
+    --success: 142 76% 36%;
+    --success-foreground: 0 0% 100%;
+    --warning: 38 92% 50%;
+    --warning-foreground: 0 0% 100%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+    font-family: 'LINE Seed Sans TH', 'Noto Sans Thai', sans-serif;
+  }
+}
+
+@layer utilities {
+  .bg-primary {
+    background-color: hsl(var(--primary));
+    background-image: var(--brand-gradient);
+  }
+
+  .bg-brand-gradient {
+    background-color: hsl(var(--primary));
+    background-image: var(--brand-gradient);
+  }
+}
+
+/* LINE Seed Sans font-face */
+@font-face {
+  font-family: 'LINE Seed Sans TH';
+  src: url('https://cdn.jsdelivr.net/gh/nicemathporn/LINESeedSansTH/woff2/LINESeedSansTH_W_Th.woff2') format('woff2');
+  font-weight: 100;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'LINE Seed Sans TH';
+  src: url('https://cdn.jsdelivr.net/gh/nicemathporn/LINESeedSansTH/woff2/LINESeedSansTH_W_Rg.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'LINE Seed Sans TH';
+  src: url('https://cdn.jsdelivr.net/gh/nicemathporn/LINESeedSansTH/woff2/LINESeedSansTH_W_Bd.woff2') format('woff2');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'LINE Seed Sans TH';
+  src: url('https://cdn.jsdelivr.net/gh/nicemathporn/LINESeedSansTH/woff2/LINESeedSansTH_W_XBd.woff2') format('woff2');
+  font-weight: 800;
+  font-style: normal;
+  font-display: swap;
+}

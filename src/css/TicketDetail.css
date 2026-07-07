@@ -1,0 +1,4 @@
+.text-card-foreground.expired,
+.text-card-foreground.cancelled {
+    opacity: .7;
+}
