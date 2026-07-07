@@ -1,12 +1,16 @@
-import { User, Ticket, Star, Wallet, ChevronRight, Bus, LogIn, UserPlus, LogOut, Search, MessageSquareWarning } from "lucide-react";
+import { User, Ticket, Star, Wallet, ChevronRight, Bus, LogIn, UserPlus, LogOut, Search, MessageSquareWarning, Languages } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useEffect, useState } from "react";
 import liff from "@line/liff";
 import { getUserMe, loginWithLine, logout as apiLogout } from "@/services/api";
 import { cn } from "@/lib/utils";
+import { useTranslation } from "react-i18next";
+import type { AppLanguage, LanguageOption } from "@/i18n/resources";
+import { getLanguageOptions, LANGUAGE_RESOURCES_UPDATED_EVENT } from "@/i18n/remoteResources";
 
 const menuItems = [
   { label: "ตั๋วของฉัน", icon: Ticket, to: "/my-tickets", key: "tickets" },
@@ -28,12 +32,21 @@ type UserMe = {
   "memberSince": string
 }
 const Profile = () => {
+  const { i18n, t } = useTranslation();
   const [userMe, setUserMe] = useState<UserMe | null>(null)
+  const [languageOptions, setLanguageOptions] = useState<LanguageOption[]>(() => getLanguageOptions());
 
 
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    const refreshLanguageOptions = () => {
+      setLanguageOptions(getLanguageOptions());
+    };
+
+    window.addEventListener(LANGUAGE_RESOURCES_UPDATED_EVENT, refreshLanguageOptions);
+    i18n.on("languageChanged", refreshLanguageOptions);
+
     const fetchUserData = async () => {
       try {
         setLoading(true);
@@ -82,7 +95,12 @@ const Profile = () => {
     };
 
     fetchUserData();
-  }, []);
+
+    return () => {
+      window.removeEventListener(LANGUAGE_RESOURCES_UPDATED_EVENT, refreshLanguageOptions);
+      i18n.off("languageChanged", refreshLanguageOptions);
+    };
+  }, [i18n]);
 
   const logout = async () => {
     await apiLogout()
@@ -90,6 +108,11 @@ const Profile = () => {
     localStorage.removeItem("user")
     setUserMe(null)
   }
+
+  const changeLanguage = (language: AppLanguage) => {
+    i18n.changeLanguage(language);
+  };
+
   return (
     <div className="min-h-screen bg-background flex flex-col pb-20">
       <header className="bg-primary text-primary-foreground px-4 py-3 flex items-center gap-3 shadow-md sticky top-0 z-50">
@@ -114,16 +137,16 @@ const Profile = () => {
 
           <h2 className="text-lg font-bold">
             {
-              userMe && userMe?.fullName ? userMe?.fullName : "ผู้ใช้ทั่วไป"
+              userMe && userMe?.fullName ? userMe?.fullName : t("ผู้ใช้ทั่วไป")
             }
           </h2>
-          <p className="text-sm text-muted-foreground">{userMe ? userMe.phone : "ยังไม่ได้เข้าสู่ระบบ"}</p>
+          <p className="text-sm text-muted-foreground">{userMe ? userMe.phone : t("ยังไม่ได้เข้าสู่ระบบ")}</p>
           <div className="flex gap-3 mt-4 w-full max-w-xs">
             {
               !userMe && <Button asChild className="flex-1" size="lg">
                 <Link to="/login">
                   <LogIn className="h-4 w-4 mr-2" />
-                  เข้าสู่ระบบ
+                  {t("เข้าสู่ระบบ")}
                 </Link>
               </Button>
             }
@@ -131,7 +154,7 @@ const Profile = () => {
               !userMe && <Button asChild variant="outline" className="flex-1" size="lg">
                 <Link to="/register">
                   <UserPlus className="h-4 w-4 mr-2" />
-                  ลงทะเบียน
+                  {t("ลงทะเบียน")}
                 </Link>
               </Button>
             }
@@ -141,7 +164,7 @@ const Profile = () => {
                 logout()
               }}>
                 <LogOut className="h-4 w-4 mr-2" />
-                ออกจากระบบ
+                {t("ออกจากระบบ")}
               </Button>
             }
           </div>
@@ -182,12 +205,12 @@ const Profile = () => {
               >
                 <div className="flex items-center gap-3">
                   <Icon className="h-5 w-5 text-muted-foreground" />
-                  <span className="font-medium">{label}</span>
+                  <span className="font-medium">{t(label)}</span>
                 </div>
                 <div className="flex items-center gap-2">
                   {key === "points" && userMe && (
                     <Badge variant="secondary" className="font-semibold">
-                      {userMe.points} แต้ม
+                      {userMe.points} {t("แต้ม")}
                     </Badge>
                   )}
                   {key === "wallet" && userMe && (
@@ -199,6 +222,27 @@ const Profile = () => {
                 </div>
               </Link>
             ))}
+            <div className="flex items-center justify-between px-4 py-4">
+              <div className="flex items-center gap-3">
+                <Languages className="h-5 w-5 text-muted-foreground" />
+                <div className="flex flex-col">
+                  <span className="font-medium">{t("ตั้งค่าภาษา")}</span>
+                  <span className="text-xs text-muted-foreground">Language</span>
+                </div>
+              </div>
+              <Select value={i18n.language} onValueChange={(value) => changeLanguage(value as AppLanguage)}>
+                <SelectTrigger className="h-9 w-32">
+                  <SelectValue placeholder={t("ภาษา")} />
+                </SelectTrigger>
+                <SelectContent>
+                  {languageOptions.map((language) => (
+                    <SelectItem key={language.code} value={language.code}>
+                      {language.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
             {userMe && (
               <Link
                 to="/update-profile"
@@ -212,9 +256,9 @@ const Profile = () => {
                     )}
                   </div>
                   <div className="flex flex-col">
-                    <span className={cn("font-medium", !userMe.phone && "text-destructive")}>อัปเดตข้อมูลโปรไฟล์</span>
+                    <span className={cn("font-medium", !userMe.phone && "text-destructive")}>{t("อัปเดตข้อมูลโปรไฟล์")}</span>
                     {!userMe.phone && (
-                      <span className="text-[10px] text-destructive/80 font-bold">กรุณาเพิ่มเบอร์โทรศัพท์</span>
+                      <span className="text-[10px] text-destructive/80 font-bold">{t("กรุณาเพิ่มเบอร์โทรศัพท์")}</span>
                     )}
                   </div>
                 </div>

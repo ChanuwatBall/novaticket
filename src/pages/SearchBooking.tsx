@@ -13,8 +13,7 @@ import moment from "moment";
 import { toast } from "sonner";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { getProvinces, login } from "@/services/api";
-import axios from "axios";
+import { bookingList, getProvinces, login } from "@/services/api";
 
 const SearchBooking = () => {
   const navigate = useNavigate();
@@ -58,12 +57,8 @@ const SearchBooking = () => {
     setSearched(true);
     try {
 
-      const bookingList = await axios.get(import.meta.env.VITE_API_URL + `api/bookings`, {
-        headers: {
-          "Authorization": `Bearer ${token}`
-        }
-      })
-      console.log("bookingList ", bookingList)
+      const bookings = await bookingList(1, 10, token);
+      console.log("bookingList ", bookings)
     } catch (error: any) {
       console.error("Search booking error:", error);
       toast.error("เกิดข้อผิดพลาดในการค้นหา: " + (error.message || ""));

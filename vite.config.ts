@@ -18,8 +18,9 @@ export default defineConfig(({ mode }) => ({
     },
     proxy: {
       '/api': {
-        target: 'http://localhost:8081',
+        target: 'https://nova-api.rubyclaw.tech',
         changeOrigin: true,
+        secure: true,
       },
     },
   },
@@ -31,4 +32,3 @@ export default defineConfig(({ mode }) => ({
     },
   },
 }));
-

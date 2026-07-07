@@ -21,6 +21,7 @@ import { loginWithLine, getUserMe, getPromotions, getProvinces, getRoutes, getBu
 import liff from "@line/liff";
 import moment from "moment";
 import { statusConfig } from "./MyTickets";
+import { t } from "i18next";
 
 const Home = () => {
   const store = useBookingStore();
@@ -53,7 +54,7 @@ const Home = () => {
     const list = selectedRouteId
       ? provinces.filter((p) => p.region_id == selectedRouteId)
       : provinces;
-    return list.filter((v, i, a) => a.findIndex(t => t.destination === v.destination) === i);
+    return list?.filter((v, i, a) => a.findIndex(t => t.destination === v.destination) === i);
   }, [selectedRouteId, provinces]);
 
 
@@ -290,7 +291,7 @@ const Home = () => {
 
           try {
             const bookings = await bookingList(1, 100)
-            const upcomingTickets = bookings?.data.filter((ticket) => getTicketStatus(ticket).key === "upcoming" && ticket.paymentStatus === "paid")
+            const upcomingTickets = bookings?.data?.filter((ticket) => getTicketStatus(ticket).key === "upcoming" && ticket.paymentStatus === "paid")
             if (upcomingTickets.length > 0) {
               console.log("Founded upcoming tickets: ")
 
@@ -315,7 +316,7 @@ const Home = () => {
     <div className="min-h-screen bg-background flex flex-col pb-20">
       <header className="bg-primary text-primary-foreground px-4 py-3 flex items-start justify-between gap-3 shadow-md sticky top-0  z-50 pt-8 rounded-b-3xl " style={{ height: "10rem" }}>
         <div className="flex items-center gap-2">
-          <h1 className="text-xl font-bold" > Booking your best trip</h1>
+          <h1 className="text-xl font-bold" > {t("Booking your best trip")}</h1>
         </div>
         <Link to="/profile">
           {userMe?.avatarUrl ? (
@@ -347,14 +348,14 @@ const Home = () => {
 
                 <div className="space-y-1.5 mt-3">
                   <label className="text-sm font-medium text-muted-foreground ">
-                    ต้นทาง
+                    {t("ต้นทาง")}
                   </label>
                   <div className={cn("w-full h-12 justify-start font-normal relative flex items-center gap-1")}>
                     <MapPin className="h-3.5 w-3.5  text-muted-foreground" />
                     <input
                       type="text"
                       value={store.originProvinceId?.name || ""}
-                      placeholder="เลือกต้นทาง"
+                      placeholder={t("เลือกต้นทาง")}
                       onFocus={() => setOpenOrigin(true)}
                       onChange={(e) => setStartpoint(e.target.value)}
                       onBlur={() => setTimeout(() => setOpenOrigin(false), 150)}
@@ -382,14 +383,14 @@ const Home = () => {
 
                 <div className="space-y-1.5 mt-3">
                   <label className="text-sm font-medium text-muted-foreground  gap-1">
-                    ปลายทาง
+                    {t("ปลายทาง")}
                   </label>
                   <div className={cn("w-full h-12 justify-start font-normal relative flex items-center gap-1")}>
                     <MapPin className="h-3.5 w-3.5  text-muted-foreground" />
                     <input
                       type="text"
                       value={store?.destinationProvinceId?.name || ""}
-                      placeholder="เลือกปลายทาง"
+                      placeholder={t("เลือกปลายทาง")}
                       onFocus={() => setOpenDestination(true)}
                       onChange={(e) => { setDestination(e.target.value) }}
                       onBlur={() => setTimeout(() => setOpenDestination(false), 150)}
@@ -427,7 +428,7 @@ const Home = () => {
                         }}
                       >
                         <SelectTrigger className="h-12 border-none bg-transparent" style={{ borderBottom: "1px solid #DDD", borderRadius: "0px" }}>
-                          <SelectValue placeholder="เลือกจุดขึ้น" />
+                          <SelectValue placeholder={t("เลือกจุดขึ้น")} />
                         </SelectTrigger>
                         <SelectContent style={{ zIndex: "999" }}>
                           {filteredOriginBusStops.map(p => (
@@ -446,7 +447,7 @@ const Home = () => {
                         }}
                       >
                         <SelectTrigger className="h-12 border-none bg-transparent" style={{ borderBottom: "1px solid #DDD", borderRadius: "0px" }}>
-                          <SelectValue placeholder="เลือกจุดลง" />
+                          <SelectValue placeholder={t("เลือกจุดลง")} />
                         </SelectTrigger>
                         <SelectContent style={{ zIndex: "999" }}>
                           {filteredDestBusStops.map(p => (
@@ -462,13 +463,13 @@ const Home = () => {
 
               <div className="grid grid-cols-2 gap-2 mt-2" >
                 <div className="space-y-1.5 ">
-                  <label className="text-sm font-medium text-muted-foreground">วันที่เดินทาง</label><br />
+                  <label className="text-sm font-medium text-muted-foreground">{t("วันที่เดินทาง")}</label><br />
                   <Popover  >
                     <PopoverTrigger asChild>
                       <Button variant="ghost" className={cn("w-full  h-12 justify-start font-normal text-muted-foreground ")}
                         style={{ borderBottom: "1px solid  #DDD", borderRadius: "0px", margin: "0px", paddingLeft: "0px" }}  >
                         <CalendarIcon className="mr-2 h-4 w-4" />
-                        {date ? format(date, "PPP", { locale: th }) : "เลือกวันที่"}
+                        {date ? format(date, "PPP", { locale: th }) : t("เลือกวันที่")}
                       </Button>
                     </PopoverTrigger>
                     <PopoverContent className="w-auto p-0" align="start">
@@ -482,11 +483,11 @@ const Home = () => {
                   </label>
                   <Select value={String(store.passengerCount)} onValueChange={(v) => store.setPassengerCount(Number(v))}>
                     <SelectTrigger className="h-12 border-none bg-transparent " style={{ borderBottom: "1px solid  #DDD", borderRadius: "0px" }} >
-                      <Users className="h-3.5 w-3.5 text-muted-foreground" /> <SelectValue placeholder="เลือกจำนวนผู้โดยสาร" className="text-black" />
+                      <Users className="h-3.5 w-3.5 text-muted-foreground" /> <SelectValue placeholder={t("เลือกจำนวนผู้โดยสาร")} className="text-black" />
                     </SelectTrigger>
                     <SelectContent style={{ zIndex: "999" }} >
                       {Array.from({ length: maxPassenger }).map((n,i) => (
-                        <SelectItem key={i} value={String(i+1)}>{i+1} คน</SelectItem>
+                        <SelectItem key={i} value={String(i+1)}>{i+1} {t("คน")}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
@@ -495,13 +496,13 @@ const Home = () => {
 
               <Button onClick={handleBooking} className="w-full h-14 text-lg font-bold mt-4" size="lg">
                 <Ticket className="mr-2 h-5 w-5" />
-                ค้นหาเที่ยวรถ
+                {t("ค้นหาเที่ยวรถ")}
               </Button>
 
             </div>
           </div>
 
-          <section>
+          {/* <section>
             <h2 className="text-xl font-bold mb-3">ปลายทางยอดนิยม</h2>
             <div className="grid grid-cols-2 gap-3">
               {["กรุงเทพฯ", "เชียงใหม่", "ภูเก็ต", "ขอนแก่น"].map((city) => (
@@ -514,15 +515,15 @@ const Home = () => {
                 </Link>
               ))}
             </div>
-          </section>
+          </section> */}
 
           {/* Promotions */}
           <section>
-            <h2 className="text-xl font-bold mb-3">โปรโมชั่นล่าสุด</h2>
+            <h2 className="text-xl font-bold mb-3">{t("โปรโมชั่นล่าสุด")}</h2>
             <Link to="/promotions">
               <Button variant="outline" className="w-full h-12 font-bold">
                 <Tag className="mr-2 h-4 w-4" />
-                ดูโปรโมชั่นทั้งหมด
+                {t("ดูโปรโมชั่นทั้งหมด")}
               </Button>
             </Link> <br /> <br />
             <Swiper
@@ -565,7 +566,7 @@ const Home = () => {
 
           {faqs && faqs.length > 0 && (
             <section className="mt-8 mb-6">
-              <h2 className="text-xl font-bold mb-3">คำถามที่พบบ่อย</h2>
+              <h2 className="text-xl font-bold mb-3">{t("คำถามที่พบบ่อย")}</h2>
               <Accordion type="single" collapsible className="w-full bg-white rounded-2xl p-4 shadow-sm">
                 {faqs.map((faq) => (
                   <AccordionItem key={faq.id} value={faq.id}>

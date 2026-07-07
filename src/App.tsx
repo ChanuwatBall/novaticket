@@ -32,10 +32,26 @@ import PromotionDetail from "./pages/PromotionDetail";
 import BusStop from "./pages/BusStop";
 import { getPreferences, loginWithLine, refreshToken } from "./services/api";
 import { applyPreferences, resolvePreferences, storePreferences } from "./lib/preferences";
+import { applyRemoteLanguageResources } from "./i18n/remoteResources";
 
 const queryClient = new QueryClient();
 const LINE_AUTH_RETRY_KEY = "lineAuthRetryAttempted";
 const USER_LOCATION_STORAGE_KEY = "userLocation";
+const LIFF_INIT_TIMEOUT_MS = 12_000;
+
+const shouldSkipLiffInit = () => {
+  const { protocol } = window.location;
+  return protocol !== "https:" || window.location.href.startsWith("https://lovable.dev");
+};
+
+const withTimeout = <T,>(promise: Promise<T>, timeoutMs: number, label: string) => {
+  return Promise.race([
+    promise,
+    new Promise<T>((_, reject) => {
+      window.setTimeout(() => reject(new Error(`${label} timed out`)), timeoutMs);
+    }),
+  ]);
+};
 
 const App = () => {
   const [isInitializing, setIsInitializing] = useState(true);
@@ -77,11 +93,12 @@ const App = () => {
       }
 
       storePreferences(preferences);
+      applyRemoteLanguageResources(preferences.languageResources);
       applyPreferences(preferences);
     };
 
-    if (!window.location.href.startsWith("https://") || window.location.href.startsWith("https://lovable.dev")) {
-      console.log("Not on production URL, skipping LIFF init");
+    if (shouldSkipLiffInit()) {
+      console.log("Non-LIFF URL detected, skipping LIFF init");
       setIsInitializing(false);
       initPreferences();
       return;
@@ -95,7 +112,11 @@ const App = () => {
 
     const initLiff = async () => {
       try {
-        await liff.init({ liffId: import.meta.env.VITE_LIFF_ID });
+        await withTimeout(
+          liff.init({ liffId: import.meta.env.VITE_LIFF_ID }),
+          LIFF_INIT_TIMEOUT_MS,
+          "LIFF init",
+        );
         console.log("LIFF init succeeded");
 
         if (!liff.isLoggedIn()) {

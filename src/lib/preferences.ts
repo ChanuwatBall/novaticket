@@ -2,6 +2,7 @@ type AppPreferences = {
   oaTitle?: string | null;
   colorPrimary?: string | null;
   colorSecondary?: string | null;
+  languageResources?: unknown;
   webIconUrl?: string | null;
   web_icon_url?: string | null;
 };

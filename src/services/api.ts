@@ -1,11 +1,28 @@
 // import axios from "axios";
 
 import axios from "axios";
-const baseUrl = import.meta.env.VITE_API_URL;
+const envBaseUrl = import.meta.env.VITE_API_URL || "/";
+
+const isLocalOrLanHost = (hostname: string) => {
+  if (/^(localhost|127\.0\.0\.1|0\.0\.0\.0|\[::1\]|::1)$/i.test(hostname)) return true;
+  if (/^192\.168\./.test(hostname)) return true;
+  if (/^10\./.test(hostname)) return true;
+
+  const match = hostname.match(/^172\.(\d+)\./);
+  if (!match) return false;
+
+  const secondOctet = Number(match[1]);
+  return secondOctet >= 16 && secondOctet <= 31;
+};
+
+export const apiBaseUrl =
+  typeof window !== "undefined" && isLocalOrLanHost(window.location.hostname)
+    ? "/"
+    : envBaseUrl;
 
 
 const api = axios.create({
-  baseURL: baseUrl,
+  baseURL: apiBaseUrl,
   timeout: 15000,
   headers: { "Content-Type": "application/json" },
 });
@@ -180,10 +197,10 @@ export const getAddons = async (id: string,page: number, limit: number) => {
     })
 }
 
-export const bookingList = (page = 1, limit = 10) => {
+export const bookingList = (page = 1, limit = 10, token?: string) => {
   return api.get(`/api/bookings`, {
     params: { page, limit },
-    headers: getAuthHeaders()
+    headers: token ? { Authorization: `Bearer ${token}` } : getAuthHeaders()
   })
     .then((res) => {
       console.log("bookingList res ", res)
