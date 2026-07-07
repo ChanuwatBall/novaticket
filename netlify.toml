@@ -5,4 +5,10 @@
 [build.environment]
   NODE_VERSION = "22"
 
+[[redirects]]
+  from = "/api/*"
+  to = "https://nova-api.rubyclaw.tech/api/:splat"
+  status = 200
+  force = true
+
 # Use the existing `public/_redirects` for SPA routing (already present)

@@ -1,7 +1,7 @@
 // import axios from "axios";
 
 import axios from "axios";
-const envBaseUrl = import.meta.env.VITE_API_URL || "/";
+const envBaseUrl = import.meta.env.VITE_API_URL?.trim() || "/";
 
 const isLocalOrLanHost = (hostname: string) => {
   if (/^(localhost|127\.0\.0\.1|0\.0\.0\.0|\[::1\]|::1)$/i.test(hostname)) return true;
