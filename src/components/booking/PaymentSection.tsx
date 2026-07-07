@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useBookingStore } from "@/store/bookingStore";
 import { Button } from "@/components/ui/button";
@@ -31,7 +31,10 @@ const PaymentSection = () => {
   const subtotal = store.passengers.reduce((sum, p) => {
     return sum + (tripPrice * getPassengerMultiplier(p.passengerType));
   }, 0);
-  const total = Math.max(0, subtotal - store.discount);
+  const totalMealCost = store.mealAddons.reduce((sum, m) => sum + m.items.reduce((s, it) => s + (it.item.price * it.qty), 0), 0);
+
+
+  const total = Math.max(0, (subtotal + totalMealCost) - store.discount);
 
   const handlePaymentMethodChange = (value: string) => {
     store.setPaymentMethod(value);
@@ -43,7 +46,24 @@ const PaymentSection = () => {
     store.paymentMethod === "qr" ||
     (store.paymentMethod === "wallet" && selectedEWallet !== "");
 
-  const handleConfirmPayment = useCallback(() => {
+  const setupmeal = async (meals) => {
+    console.log(" meals  ", meals)
+    let next = []
+    if (meals.length > 0) {
+      await meals.map(async (m: any) => {
+        const items = Object.values(m?.items)
+        console.log("items ", items)
+        await items?.map((i: any) => {
+          console.log("i ", i)
+          next = [...next, { addOnId: i?.item?.id, qty: i?.qty }]
+        })
+      })
+
+      console.log("meals ", next)
+    }
+    return next
+  }
+  const handleConfirmPayment = useCallback(async () => {
     const bookingDetail = {
       route: {
         origin: store.originProvinceId?.name,
@@ -61,8 +81,9 @@ const PaymentSection = () => {
       total,
     };
 
-    console.log(" ConfirmPayment passengers ",store.passengers)
-    console.log(" ConfirmPayment mealAddons ",store.mealAddons)
+    console.log(" ConfirmPayment passengers ", store.passengers)
+    console.log(" ConfirmPayment mealAddons ", store.mealAddons)
+    const addons = await setupmeal(store.mealAddons)
     const body = {
       tripId: store.selectedTrip?.id,
       travelDate: store.travelDate,
@@ -72,7 +93,7 @@ const PaymentSection = () => {
       dropOffPointId: store.dropOffPointId?.name,
       passengers: store.passengers,
       promoCode: store.promoCode,
-      addOns: store.mealAddons
+      addOns: addons
     };
 
     const sourceType = store.paymentMethod === "qr" ? "promptpay" : selectedEWallet;
@@ -106,6 +127,21 @@ const PaymentSection = () => {
           </div>
 
           <div className="pt-3 border-t border-primary/10 space-y-3">
+           <div className="space-y-2">
+              <span className="text-[10px] uppercase text-muted-foreground font-bold tracking-wider">รายการอาหารและอื่นๆ</span>
+            {store?.mealAddons && (totalMealCost > 0) && (
+              <div className="mt-2 space-y-1">
+                {store?.mealAddons.map(addon => addon.items).flat().map(it => (
+                  <div key={it.item.id} className="flex justify-between text-[11px]"><span className="text-muted-foreground">{it.item.name} x{it.qty}</span><span className="font-bold text-primary">฿{(it.item.price * it.qty).toLocaleString()}</span></div>
+                ))}
+                {/* <div className="flex justify-between text-[11px] font-extrabold pt-1 border-t border-primary/20">
+                  <span className="text-primary">รวมอาหาร</span>
+                  <span className="text-primary">฿{totalMealCost.toLocaleString()}</span>
+                </div> */}
+              </div>
+            )}
+            </div>
+
             <div className="space-y-2">
               <span className="text-[10px] uppercase text-muted-foreground font-bold tracking-wider">ผู้โดยสารและที่นั่ง ({store.passengers.length} ท่าน)</span>
               <div className="grid grid-cols-1 gap-2">
@@ -124,6 +160,8 @@ const PaymentSection = () => {
                 ))}
               </div>
             </div>
+
+           
           </div>
 
           <div className="pt-3 border-t border-primary/10 space-y-2">
@@ -136,7 +174,7 @@ const PaymentSection = () => {
                 <span>ส่วนลดโปรโมชั่น</span>
                 <span>-฿{store.discount}</span>
               </div>
-            )}
+            )} 
             <div className="flex justify-between items-center pt-2 border-t border-primary/10">
               <span className="font-black text-sm uppercase">รวมที่ต้องชำระ</span>
               <span className="text-xl font-black text-primary">฿{total}</span>

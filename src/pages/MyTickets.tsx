@@ -61,7 +61,7 @@ type Ticket = {
     "total": number
 }
 
-const statusConfig: Record<string, { label: string, variant: "default" | "success" | "destructive" | "outline" | "secondary" }> = {
+export const statusConfig: Record<string, { label: string, variant: "default" | "success" | "destructive" | "outline" | "secondary" }> = {
   pending: { label: "รอชำระเงิน", variant: "secondary" },
   upcoming: { label: "กำลังจะถึง", variant: "default" },
   confirmed: { label: "เสร็จสิ้น", variant: "success" },

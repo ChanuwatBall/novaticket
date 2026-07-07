@@ -8,7 +8,7 @@ import { useBookingStore } from "@/store/bookingStore";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Timer, AlertCircle, CheckCircle2, Store } from "lucide-react";
-import { createCharge, cancelCharge, createBooking, NewBooking, chargeQrPayment, paymentStatus, chargeWechatPayment, chargeAlipayPayment } from "@/services/api";
+import { createCharge, cancelCharge, createBooking, NewBooking, chargeQrPayment, paymentStatus, chargeWechatPayment, chargeAlipayPayment, updatePassengerLocation } from "@/services/api";
 import QRCode from "qrcode";
 import liff from "@line/liff";
 
@@ -45,26 +45,21 @@ const PaymentQRPage = () => {
     total: 0,
   };
 
-  const [timeLeft, setTimeLeft] = useState(TIMER_SECONDS);
+  // const [timeLeft, setTimeLeft] = useState(TIMER_SECONDS);
   const [qrUrl, setQrUrl] = useState<string | null>(null);
   const [qrLoading, setQrLoading] = useState(true);
   const [qrError, setQrError] = useState<string | null>(null);
   const [chargeId, setChargeId] = useState<string | null>(null);
   const [chargeStatus, setChargeStatus] = useState<string>("pending");
   const [isCancelDialogOpen, setIsCancelDialogOpen] = useState(false);
+  const [paymenttimeout, setPaymentTimeout] = useState(300000); // 5 minutes in milliseconds
 
   // ใช้ Ref เพื่อเก็บ instance ของ WebSocket Client ไม่ให้หายไปเมื่อ Re-render
   const stompClientRef = useRef<Client | null>(null);
 
   const handlePaymentSuccess = useCallback(async () => {
     if (chargeStatus === "successful") return;
-
-    // const user = JSON.parse(localStorage.getItem("user") || "{}");
-    // const qrBookingPayload = JSON.stringify({
-    //   booking_reference: bookingId
-    // });
-    // const qrBookingCode = await QRCode.toDataURL("nex-ticket.com#" + qrBookingPayload);
-    // store.setBookingQrcode(qrBookingCode);
+ 
 
     setChargeStatus("successful");
     setPaymentStatus("success");
@@ -82,7 +77,7 @@ const PaymentQRPage = () => {
   // --- Countdown Timer ---
   useEffect(() => {
     const interval = setInterval(() => {
-      setTimeLeft((prev) => (prev <= 1 ? 0 : prev - 1));
+      setPaymentTimeout((prev) => (prev <= 1 ? 0 : prev - 1000));
     }, 1000);
     return () => clearInterval(interval);
   }, []);
@@ -99,6 +94,18 @@ const PaymentQRPage = () => {
 
         if (status === "success" || status === "successful") {
           handlePaymentSuccess();
+          window.navigator.geolocation.getCurrentPosition(
+            (position) => {
+              if(position.coords){
+                const userLocation = {
+                  latitude: position.coords.latitude,
+                  longitude: position.coords.longitude,
+                  accuracy_m: position.coords.accuracy
+                }; 
+                updatePassengerLocation(bookingBody?.tripId, userLocation);
+              }
+            }
+          )
           clearInterval(pollInterval);
         } else if (status === "failed") {
           handlePaymentFailed(chargeId);
@@ -114,11 +121,11 @@ const PaymentQRPage = () => {
 
   // --- Handle Timeout ---
   useEffect(() => {
-    if (timeLeft === 0 && chargeStatus === "pending" && chargeId) {
+    if (paymenttimeout === 0 && chargeStatus === "pending" && chargeId) {
       console.log("Payment timed out, running cleanup...");
       handlePaymentFailed(chargeId);
     }
-  }, [timeLeft, chargeStatus, chargeId, handlePaymentFailed]);
+  }, [paymenttimeout, chargeStatus, chargeId, handlePaymentFailed]);
 
   const hasInitialized = useRef(false);
 
@@ -162,6 +169,7 @@ const PaymentQRPage = () => {
               trip_id: store?.selectedTrip?.id
             }
           }),
+          "addOns": bookingBody?.addOns ,
           "promoCode": store.promoCode,
           "omiseChargeId": payqr.chargeId
         }
@@ -245,11 +253,11 @@ const PaymentQRPage = () => {
     navigate(-1);
   };
 
-  const minutes = Math.floor(timeLeft / 60);
-  const seconds = timeLeft % 60;
+  const minutes = Math.floor(paymenttimeout / 60000);
+  const seconds = (paymenttimeout % 60000) / 1000;
 
   // --- Render logic ---
-  if (timeLeft === 0 && chargeStatus !== "successful" && chargeStatus !== "failed") {
+  if (paymenttimeout === 0 && chargeStatus !== "successful" && chargeStatus !== "failed") {
     return (
       <BookingLayout currentStep={4} navto={() => navigate(-1)} title="หมดเวลา" showSteps={false}>
         <div className="px-4 text-center py-16">

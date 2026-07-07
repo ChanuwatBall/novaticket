@@ -22,7 +22,7 @@ const getAuthHeaders = () => {
 const getErrorData = (err: any) => err?.response?.data ?? { error: err?.message ?? "Network error" }
 
 export const getPreferences=async ()=>{
-  return await api.post("/api/preferences")
+  return await api.get("/api/preferences")
     .then((res) => {
       console.log("preferences res ", res)
       return res.data
@@ -116,6 +116,7 @@ export type NewBooking = {
   }[],
   "promoCode"?: string
   "omiseChargeId"?: string
+  "addOns":any[]
 }
 export const createBooking = async (body: NewBooking) => {
   return await api.post("/api/bookings", body, {
@@ -127,6 +128,21 @@ export const createBooking = async (body: NewBooking) => {
     })
     .catch((err) => {
       console.log("bookings err ", err)
+      return getErrorData(err)
+    })
+}
+
+ 
+export const updatePassengerLocation = async (tripId: string, body: { latitude: number, longitude: number, accuracy_m: number }) => {
+  return await api.post(`/api/trips/${tripId}/passenger-location`, body, {
+    headers: getAuthHeaders()
+  })
+    .then((res) => {
+      console.log("updatePassengerLocation res ", res)
+      return res.data
+    })
+    .catch((err) => {
+      console.log("updatePassengerLocation err ", err)
       return getErrorData(err)
     })
 }
@@ -180,10 +196,8 @@ export const bookingList = (page = 1, limit = 10) => {
 }
 
 export const bookingDetail = async ({ id, token }: any) => {
-  return await api.get(`/api/bookings/${id}`, {
-    headers: {
-      "Authorization": `Bearer ${token}`
-    }
+  return await api.get(`/api/bookings/${id}`, { 
+    headers: getAuthHeaders()
   })
     .then((res) => {
       console.log("bookingDetail res ", res)
@@ -351,11 +365,7 @@ export const updateMyProfile = async (body: { fullName?: string, phone?: string,
       return getErrorData(err)
     })
 }
-
-// curl '/api/bookings/{id}/cancel' \
-//   --request PATCH \
-//   --header 'Authorization: Bearer YOUR_SECRET_TOKEN'
-
+ 
 export const cancelBooking = (bookingId: string) => {
   return api.patch(`/api/bookings/${bookingId}/cancel`, {}, {
     headers: getAuthHeaders()

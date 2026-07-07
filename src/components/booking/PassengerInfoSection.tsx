@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useBookingStore, type PassengerInfo, type PassengerMeal } from "@/store/bookingStore";
-import { getAddons, getPromotions, getPromotionsTrip, validatePromo } from "@/services/api";
+import { getAddons, getPromotions, getPromotionsTrip, getUserMe, userPoints, validatePromo } from "@/services/api";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -56,22 +56,33 @@ const PassengerInfoSection = ({ onContinue }: PassengerInfoSectionProps) => {
   const [applyAllPhone, setApplyAllPhone] = useState(false);
   const [promotions, setPromotions] = useState<any[]>([]);
   const [showCouponDialog, setShowCouponDialog] = useState(false);
+  const [userPointsValue, setUserPointsValue] = useState<any>({
+  "totalPoints": 1,
+  "nextRewardAt": 1,
+  "rewardValue": 1
+});
 
   const redeemableCoupons = [
-    { id: 'coupon-1', title: 'คูปองส่วนลด 50 บาท', pointsRequired: 200, promoCode: 'PT50', discountAmount: 50 },
-    { id: 'coupon-2', title: 'คูปองส่วนลด 100 บาท', pointsRequired: 500, promoCode: 'PT100', discountAmount: 100 },
+    // { id: 'coupon-1', title: 'คูปองส่วนลด 50 บาท', pointsRequired: 200, promoCode: 'PT50', discountAmount: 50 },
+    // { id: 'coupon-2', title: 'คูปองส่วนลด 100 บาท', pointsRequired: 500, promoCode: 'PT100', discountAmount: 100 },
   ];
 
   useEffect(() => {
     const user = localStorage.getItem("user");
-    if (user) {
+    const getpoints = async () => {
+        const userpoint = await userPoints(); 
+        console.log("User points:", userpoint);
+        setUserPointsValue(userpoint);
+    }
+    getpoints();
+    if (user) { 
       const userData = JSON.parse(user);
       console.log("User data from localStorage:", userData);
       // Do something with the retrieved user data
       getPromotionsTrip({ 
         routeId: store.selectedTrip?.id, 
         phone: userData?.user?.phone,
-      } )
+    } )
       .then(data => {
         const apiPromos = data || [];
         // const routeOrigin = store.selectedTrip?.origin || 'กรุงเทพฯ';
@@ -300,9 +311,11 @@ const PassengerInfoSection = ({ onContinue }: PassengerInfoSectionProps) => {
             <label className="text-sm font-bold flex items-center gap-1.5">
               <Tag className="h-3.5 w-3.5 shrink-0" /> โปรโมชั่นและคูปอง
             </label>
-            <Button variant="outline" size="sm" className="h-7 text-[10px] font-bold text-amber-600 border-amber-200 bg-amber-50 hover:bg-amber-100 hover:text-amber-700 shrink-0" onClick={() => setShowCouponDialog(true)}>
-              <Coins className="h-3 w-3 mr-1" /> แลกด้วยพอยท์
-            </Button>
+            {redeemableCoupons.length > 0 && (
+              <Button variant="outline" size="sm" className="h-7 text-[10px] font-bold text-amber-600 border-amber-200 bg-amber-50 hover:bg-amber-100 hover:text-amber-700 shrink-0" onClick={() => setShowCouponDialog(true)}>
+                <Coins className="h-3 w-3 mr-1" /> แลกด้วยพอยท์
+              </Button>
+            )}
           </div>
 
           <div className="flex gap-3 overflow-x-auto pb-4 mb-4 -mx-1 px-1 scrollbar-hide">
@@ -378,7 +391,9 @@ const PassengerInfoSection = ({ onContinue }: PassengerInfoSectionProps) => {
               <Coins className="h-5 w-5 text-amber-500" /> แลกคูปองด้วยพอยท์
             </DialogTitle>
             <DialogDescription className="text-left text-xs text-amber-700/70">
-              สะสมพอยท์คงเหลือของคุณ: <span className="font-bold text-amber-700">1,250 พอยท์</span>
+              สะสมพอยท์คงเหลือของคุณ: <span className="font-bold text-amber-700">
+                {userPointsValue?.totalPoints} พอยท์
+              </span>
             </DialogDescription>
           </DialogHeader>
           <div className="p-4 overflow-y-auto space-y-3 bg-slate-50/50 rounded-b-2xl">

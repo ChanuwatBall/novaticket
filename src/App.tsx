@@ -31,17 +31,59 @@ import BottomNav from "./components/BottomNav";
 import PromotionDetail from "./pages/PromotionDetail";
 import BusStop from "./pages/BusStop";
 import { getPreferences, loginWithLine, refreshToken } from "./services/api";
+import { applyPreferences, resolvePreferences, storePreferences } from "./lib/preferences";
 
 const queryClient = new QueryClient();
 const LINE_AUTH_RETRY_KEY = "lineAuthRetryAttempted";
+const USER_LOCATION_STORAGE_KEY = "userLocation";
 
 const App = () => {
   const [isInitializing, setIsInitializing] = useState(true);
 
+  const accesslocation = () => {
+    if (!navigator.geolocation) {
+      console.warn("Geolocation is not supported by this browser");
+      return;
+    }
+
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        const userLocation = {
+          lat: position.coords.latitude,
+          lon: position.coords.longitude,
+        };
+
+        localStorage.setItem(USER_LOCATION_STORAGE_KEY, JSON.stringify(userLocation));
+      },
+      (error) => {
+        console.warn("Unable to access user location", error);
+      },
+      {
+        enableHighAccuracy: true,
+        maximumAge: 10_000,
+        timeout: 10_000,
+      },
+    );
+  };
+
   useEffect(() => {
+    const initPreferences = async () => {
+      const response = await getPreferences();
+      const preferences = resolvePreferences(response);
+
+      if (!preferences) {
+        console.error("Preferences fetch failed", response);
+        return;
+      }
+
+      storePreferences(preferences);
+      applyPreferences(preferences);
+    };
+
     if (!window.location.href.startsWith("https://") || window.location.href.startsWith("https://lovable.dev")) {
       console.log("Not on production URL, skipping LIFF init");
       setIsInitializing(false);
+      initPreferences();
       return;
     }
 
@@ -119,14 +161,12 @@ const App = () => {
 
     initLiff();
     initPreferences();
+    accesslocation();
 
     return () => clearTimeout(safetyTimer);
   }, []);
 
-  const initPreferences=async ()=>{
-    const res = await  getPreferences() 
-    
-  }
+ 
 
   if (isInitializing) {
     return (

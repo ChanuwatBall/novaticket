@@ -17,9 +17,10 @@ import "../css/Home.css";
 import { mockPromotions } from "@/data/mockData";
 // import { getRoutes, getPromotions, Province } from "@/services/api";
 import { useQuery } from "@tanstack/react-query";
-import { loginWithLine, getUserMe, getPromotions, getProvinces, getRoutes, getBusStops, getFaqs } from "@/services/api";
+import { loginWithLine, getUserMe, getPromotions, getProvinces, getRoutes, getBusStops, getFaqs, bookingList, updatePassengerLocation, bookingDetail } from "@/services/api";
 import liff from "@line/liff";
 import moment from "moment";
+import { statusConfig } from "./MyTickets";
 
 const Home = () => {
   const store = useBookingStore();
@@ -38,6 +39,7 @@ const Home = () => {
   const [faqs, setFaqs] = useState<any[]>([]);
   const [userMe, setUserMe] = useState<any>(null);
   const [busStops, setBusStops] = useState<any[]>([]);
+  const [maxPassenger, setMaxPassenger] = useState(3);
   // API Queries
 
   // const { data: promotions = [], isLoading: isLoadingPromotions } = useQuery({
@@ -73,8 +75,14 @@ const Home = () => {
   };
 
   useEffect(() => {
-
+    
     const fetchUser = async () => {
+      try {
+        const preferencesstr = localStorage.getItem("preferences");
+        const preferences = preferencesstr ? JSON.parse(preferencesstr) : null;
+        console.log("preferences ", preferences)
+        setMaxPassenger(preferences?.booking?.maxPassenger || 3);
+      } catch (error) {}
       try {
         const userme = await getUserMe();
         if (userme?.error === 'Unauthorized') {
@@ -141,6 +149,7 @@ const Home = () => {
     }
     fetchUser();
     conf();
+    checkTicketStatus();
   }, [])
 
   useEffect(() => {
@@ -194,16 +203,16 @@ const Home = () => {
 
   const filteredOriginBusStops = useMemo(() => {
     if (!store.originProvinceId || !busStops.length) return [];
-    return busStops.filter(r => 
-      r.route_id?.origin_id === store.originProvinceId.id && 
+    return busStops.filter(r =>
+      r.route_id?.origin_id === store.originProvinceId.id &&
       (r.type === "pickup" || r.type === "stop")
     );
   }, [busStops, store.originProvinceId]);
 
   const filteredDestBusStops = useMemo(() => {
     if (!store.destinationProvinceId || !busStops.length) return [];
-    return busStops.filter(r => 
-      r.route_id?.destination_id === store.destinationProvinceId.id && 
+    return busStops.filter(r =>
+      r.route_id?.destination_id === store.destinationProvinceId.id &&
       (r.type === "dropoff" || r.type === "stop")
     );
   }, [busStops, store.destinationProvinceId]);
@@ -236,12 +245,71 @@ const Home = () => {
     store.setOriginProvince(null)
     store.setDestinationProvince(null)
   }
+
+  const getTicketStatus = (ticket: any) => {
+    let key = 'confirmed';
+    if (ticket.status === "cancelled") key = "cancelled";
+    else if (ticket.status === "expired") key = "expired";
+    else if (ticket.paymentStatus === "pending") {
+      if (moment().isBefore(moment(ticket.expiresAt))) {
+        key = "pending";
+      } else {
+        key = "expired";
+      }
+    } else {
+      // For paid tickets, check trip time
+      const tripTime = moment(`${ticket.date} ${ticket.departureTime}`, "YYYY-MM-DD HH:mm");
+      if (moment().isBefore(tripTime)) {
+        key = "upcoming";
+      } else {
+        key = "confirmed";
+      }
+    }
+
+    return { ...statusConfig[key], key };
+  };
   const chooseRoute = (p) => {
     selectRoute(p);
     const sp = provinces.find(pr => pr.id == p.origin)
     const ep = provinces.find(pr => pr.id == p.destination)
     store?.setOriginProvince(sp);
     store?.setDestinationProvince(ep);
+  }
+
+  const checkTicketStatus = async () => {
+    console.log("start checking TicketStatus ....")
+    let userLocation: any = {}
+    window.navigator.geolocation.watchPosition(
+      async (position) => {
+        if (position.coords) {
+          userLocation = {
+            latitude: position.coords.latitude,
+            longitude: position.coords.longitude,
+            accuracy_m: position.coords.accuracy
+          };
+
+          try {
+            const bookings = await bookingList(1, 100)
+            const upcomingTickets = bookings?.data.filter((ticket) => getTicketStatus(ticket).key === "upcoming" && ticket.paymentStatus === "paid")
+            if (upcomingTickets.length > 0) {
+              console.log("Founded upcoming tickets: ")
+
+              await upcomingTickets.forEach(async (ticket) => {
+                console.log("upcoming ticket: ", ticket?.id);
+                const bookDe: any = await bookingDetail({ id: ticket?.id })
+                console.log("Updating location for booking: ", bookDe);
+                updatePassengerLocation(bookDe?.tripId, userLocation);
+              });
+            } else {
+              console.log("No upcoming tickets found, skipping location update");
+            }
+          } catch (error) {
+            console.error("Error checking ticket status: ", error);
+          }
+
+        }
+      }
+    )
   }
   return (
     <div className="min-h-screen bg-background flex flex-col pb-20">
@@ -351,8 +419,8 @@ const Home = () => {
                   <div className="grid grid-cols-2 gap-2 mt-2">
                     <div className="space-y-1.5">
                       <label className="text-sm font-medium text-muted-foreground">จุดขึ้นรถ</label>
-                      <Select 
-                        value={store.boardingPointId?.id} 
+                      <Select
+                        value={store.boardingPointId?.id}
                         onValueChange={(val) => {
                           const pt = filteredOriginBusStops.find(p => p.id === val);
                           store.setBoardingPoint(pt);
@@ -370,8 +438,8 @@ const Home = () => {
                     </div>
                     <div className="space-y-1.5">
                       <label className="text-sm font-medium text-muted-foreground">จุดลงรถ</label>
-                      <Select 
-                        value={store.dropOffPointId?.id} 
+                      <Select
+                        value={store.dropOffPointId?.id}
                         onValueChange={(val) => {
                           const pt = filteredDestBusStops.find(p => p.id === val);
                           store.setDropOffPoint(pt);
@@ -417,8 +485,8 @@ const Home = () => {
                       <Users className="h-3.5 w-3.5 text-muted-foreground" /> <SelectValue placeholder="เลือกจำนวนผู้โดยสาร" className="text-black" />
                     </SelectTrigger>
                     <SelectContent style={{ zIndex: "999" }} >
-                      {[1, 2, 3].map((n) => (
-                        <SelectItem key={n} value={String(n)}>{n} คน</SelectItem>
+                      {Array.from({ length: maxPassenger }).map((n,i) => (
+                        <SelectItem key={i} value={String(i+1)}>{i+1} คน</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
