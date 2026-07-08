@@ -23,12 +23,12 @@ import {
   Info,
   Circle
 } from "lucide-react";
-import moment from "moment";
-import "moment/locale/th";
+import moment from "moment"; 
 import { cn } from "@/lib/utils";
 import { Swiper, SwiperSlide } from "swiper/react";
 import "swiper/css";
 import TripCardSkeleton from "./TripCardSkeleton";
+import { t } from "i18next";
 
 interface SearchResultsSectionProps {
   onSelectTrip: (trip: any) => void;
@@ -129,7 +129,7 @@ const SearchResultsSection = ({ onSelectTrip }: SearchResultsSectionProps) => {
         {loading ? (
           <div className="space-y-4">
             <div className="flex flex-col gap-2 mb-4 animate-pulse">
-              <h3 className="text-lg font-bold">เลือกเที่ยวรถ</h3>
+              <h3 className="text-lg font-bold">{t("เลือกเที่ยวรถ")}</h3>
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <div className="h-4 w-4 bg-slate-100 rounded" />
@@ -144,11 +144,11 @@ const SearchResultsSection = ({ onSelectTrip }: SearchResultsSectionProps) => {
         ) : (
           <>
             <div className="flex flex-col gap-1 mb-4">
-              <h3 className="text-lg font-bold">เลือกเที่ยวรถ</h3>
+              <h3 className="text-lg font-bold">{t("เลือกเที่ยวรถ")}</h3>
               <div className="flex items-center justify-between  ">
                 <div className="flex items-center  gap-2 text-sm text-muted-foreground">
                   <MapPin className="h-3.5 w-3.5" />
-                  <span>{store.originProvinceId?.name} → {store.destinationProvinceId?.name}</span>
+                  <span>{t(store.originProvinceId?.name)} → {t(store.destinationProvinceId?.name)}</span>
 
                 </div>
                 <div className="flex items-center gap-2 text-sm text-muted-foreground">
@@ -160,8 +160,8 @@ const SearchResultsSection = ({ onSelectTrip }: SearchResultsSectionProps) => {
             {trips.length === 0 ? (
               <div className="text-center py-12 text-muted-foreground bg-slate-50 rounded-2xl border-2 border-dashed border-slate-200">
                 <Bus className="h-12 w-12 mx-auto mb-3 opacity-20" />
-                <p className="font-medium text-slate-500">ไม่พบเที่ยวรถในเส้นทางนี้</p>
-                <p className="text-xs text-slate-400 mt-1">ลองเปลี่ยนวันที่หรือเส้นทางอื่น</p>
+                <p className="font-medium text-slate-500">{t("ไม่พบเที่ยวรถในเส้นทางนี้")}</p>
+                <p className="text-xs text-slate-400 mt-1">{t("ลองเปลี่ยนวันที่หรือเส้นทางอื่น")}</p>
               </div>
             ) : (
               <Accordion type="single" collapsible className="space-y-4">
@@ -214,7 +214,7 @@ const SearchResultsSection = ({ onSelectTrip }: SearchResultsSectionProps) => {
                           <div className="flex flex-col items-end justify-center h-full min-w-[80px]">
                             <span className="text-xl font-black text-primary leading-none">฿{trip.price}</span>
                             <Badge variant="secondary" className="h-5 px-2 text-[9px] text-slate-400 font-bold bg-slate-100/50 hover:bg-slate-100">
-                              ว่าง {trip.available_seats} ที่นั่ง
+                              ({t("ว่าง")}) {trip.available_seats} {t("ที่นั่ง")}
                             </Badge>
                           </div>
                         </div>
@@ -224,7 +224,7 @@ const SearchResultsSection = ({ onSelectTrip }: SearchResultsSectionProps) => {
                         <div className="flex items-center justify-between pt-3 border-t border-slate-50">
 
                           <div className="flex items-center gap-1.5 text-[10px] font-bold text-primary">
-                            ดูรายละเอียด <ChevronRight className={cn("h-3 w-3 transition-transform duration-300", store.selectedTrip?.id === trip.id ? "rotate-90" : "")} />
+                            {t("ดูรายละเอียด")} <ChevronRight className={cn("h-3 w-3 transition-transform duration-300", store.selectedTrip?.id === trip.id ? "rotate-90" : "")} />
                           </div>
                         </div>
                       </div>
@@ -272,7 +272,7 @@ const SearchResultsSection = ({ onSelectTrip }: SearchResultsSectionProps) => {
                                   <div className="flex justify-between items-start">
                                     <div>
                                       <p className="font-bold text-sm">{trip.departure_time} — {store.originProvinceId?.name}</p>
-                                      <p className="text-xs text-muted-foreground mt-0.5">สถานีขนส่งต้นทาง</p>
+                                      <p className="text-xs text-muted-foreground mt-0.5">{t("สถานีขนส่งต้นทาง")}</p>
                                     </div>
                                     <p className="text-[10px] font-bold text-slate-400">{moment(trip.date).locale("th").format('D MMM YYYY')}</p>
                                   </div>
@@ -284,7 +284,7 @@ const SearchResultsSection = ({ onSelectTrip }: SearchResultsSectionProps) => {
                                   <div className="flex justify-between items-start">
                                     <div>
                                       <p className="font-bold text-sm">{trip.arrival_time} — {store.destinationProvinceId?.name}</p>
-                                      <p className="text-xs text-muted-foreground mt-0.5">สถานีขนส่งปลายทาง</p>
+                                      <p className="text-xs text-muted-foreground mt-0.5">{t("สถานีขนส่งปลายทาง")}</p>
                                     </div>
                                     <p className="text-[10px] font-bold text-slate-400">{moment(trip.date).locale("th").format('D MMM YYYY')}</p>
                                   </div>
@@ -296,7 +296,7 @@ const SearchResultsSection = ({ onSelectTrip }: SearchResultsSectionProps) => {
 
                         {/* Amenities */}
                         <div className="bg-white rounded-xl p-4 border border-slate-100 shadow-sm">
-                          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3">สิ่งอำนวยความสะดวก</p>
+                          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3">{t("สิ่งอำนวยความสะดวก")}</p>
                           <div className="flex gap-4">
                             {trip.bus_type_id?.amenities?.map((amenity: string, idx: number) => (
                               <div key={idx} className="flex flex-col items-center gap-1.5 grayscale opacity-70">
@@ -307,7 +307,7 @@ const SearchResultsSection = ({ onSelectTrip }: SearchResultsSectionProps) => {
                                 <span className="text-[8px] font-bold">{amenity}</span>
                               </div>
                             )) || (
-                                <p className="text-xs text-muted-foreground italic">ข้อมูลมาตรฐาน NexTicket</p>
+                                <p className="text-xs text-muted-foreground italic">{t("ข้อมูลมาตรฐาน")}</p>
                               )}
                           </div>
                         </div>
@@ -326,7 +326,7 @@ const SearchResultsSection = ({ onSelectTrip }: SearchResultsSectionProps) => {
                             onClick={() => onSelectTrip(trip)}
                             className="rounded-full px-10 h-12 text-base font-black shadow-lg shadow-primary/25 active:scale-95 transition-all"
                           >
-                            เลือกเที่ยวนี้
+                            {t("เลือกเที่ยวนี้")}
                           </Button>
                         </div>
                       </div>

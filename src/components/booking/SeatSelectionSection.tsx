@@ -6,6 +6,7 @@ import { type TripDetail } from "@/data/TripDetail";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { CircleDot } from "lucide-react";
+import { t } from "i18next";
 
 interface SeatSelectionSectionProps {
   onContinue: () => void;
@@ -87,24 +88,24 @@ const SeatSelectionSection = ({ onContinue }: SeatSelectionSectionProps) => {
 
   return (
     <div className="px-4 space-y-4">
-      <h3 className="text-lg font-bold">เลือกที่นั่ง ({selectedSeats.length}/{store.passengerCount})</h3>
+      <h3 className="text-lg font-bold">{t("เลือกที่นั่ง")} ({selectedSeats.length}/{store.passengerCount})</h3>
 
       {tripDetail && (
         <div className="text-center text-xs font-semibold text-muted-foreground">
-          {tripDetail?.busType} {tripDetail?.tripType} {tripDetail?.totalSeats} ที่นั่ง
+          {tripDetail?.busType} {t(tripDetail?.tripType)} {tripDetail?.totalSeats} {t("ที่นั่ง")}
         </div>
       )}
 
       {/* Legend */}
       <div className="flex items-center gap-3 text-[10px] mb-2 justify-center">
         <div className="flex items-center gap-1">
-          <div className="h-3 w-3 rounded border border-primary/30 bg-card" /> ว่าง
+          <div className="h-3 w-3 rounded border border-primary/30 bg-card" /> {t("ว่าง")}
         </div>
         <div className="flex items-center gap-1">
-          <div className="h-3 w-3 rounded bg-primary" /> เลือก
+          <div className="h-3 w-3 rounded bg-primary" /> {t("เลือก")}
         </div>
         <div className="flex items-center gap-1">
-          <div className="h-3 w-3 rounded bg-muted opacity-50" /> จองแล้ว
+          <div className="h-3 w-3 rounded bg-muted opacity-50" /> {t("จองแล้ว")}
         </div>
       </div>
 
@@ -120,7 +121,7 @@ const SeatSelectionSection = ({ onContinue }: SeatSelectionSectionProps) => {
                   return (
                     <div key={colIdx} className={cn("w-10 h-10 rounded-lg bg-muted flex flex-col items-center justify-center text-muted-foreground text-[7px] leading-tight", aisleClass)}>
                       {cell === "DRIVER" && <CircleDot className="h-3 w-3 mb-0.5" />}
-                      <span className="text-center px-0.5">{specialCellLabels[cell]}</span>
+                      <span className="text-center px-0.5">{t(specialCellLabels[cell])}</span>
                     </div>
                   );
                 }
@@ -153,7 +154,7 @@ const SeatSelectionSection = ({ onContinue }: SeatSelectionSectionProps) => {
         disabled={selectedSeats.length !== store.passengerCount}
         className="w-full h-12 text-base font-bold"
       >
-        ยืนยันที่นั่ง
+        {t("ยืนยันที่นั่ง")}
       </Button>
     </div>
   );

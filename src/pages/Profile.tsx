@@ -14,7 +14,7 @@ import { getLanguageOptions, LANGUAGE_RESOURCES_UPDATED_EVENT } from "@/i18n/rem
 
 const menuItems = [
   { label: "ตั๋วของฉัน", icon: Ticket, to: "/my-tickets", key: "tickets" },
-  { label: "สะสมแต้ม", icon: Star, to: "/points", key: "points" },
+  // { label: "สะสมแต้ม", icon: Star, to: "/points", key: "points" },
   { label: "ร้องเรียน", icon: MessageSquareWarning, to: "/complaints", key: "complaints" },
   // { label: "กระเป๋าเงิน", icon: Wallet, to: "/wallet", key: "wallet" },
 ];

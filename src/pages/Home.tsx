@@ -354,7 +354,7 @@ const Home = () => {
                     <MapPin className="h-3.5 w-3.5  text-muted-foreground" />
                     <input
                       type="text"
-                      value={store.originProvinceId?.name || ""}
+                      value={store?.originProvinceId ? t(`${store.originProvinceId?.name}`) || "" : ""}
                       placeholder={t("เลือกต้นทาง")}
                       onFocus={() => setOpenOrigin(true)}
                       onChange={(e) => setStartpoint(e.target.value)}
@@ -366,14 +366,14 @@ const Home = () => {
                         {filteredProvinces.map((p) => (
                           <li
                             key={p.id}
-                            className="cursor-pointer hover:bg-accent rounded-sm px-2 py-1"
+                            className="cursor-pointer hover:bg-accent px-2 py-1 border-b border-gray-100"
                             onClick={() => {
                               setStartpoint(p.origin);
                               setOpenOrigin(false);
                               store.setOriginProvince(p);
                             }}
                           >
-                            {p.name}
+                            {p.name} <br/><sub>{p?.nameEn}</sub>
                           </li>
                         ))}
                       </ul>
@@ -389,7 +389,7 @@ const Home = () => {
                     <MapPin className="h-3.5 w-3.5  text-muted-foreground" />
                     <input
                       type="text"
-                      value={store?.destinationProvinceId?.name || ""}
+                      value={store?.destinationProvinceId ? t(`${store?.destinationProvinceId?.name}`) || "" : ""}
                       placeholder={t("เลือกปลายทาง")}
                       onFocus={() => setOpenDestination(true)}
                       onChange={(e) => { setDestination(e.target.value) }}
@@ -401,14 +401,14 @@ const Home = () => {
                         {filteredProvinceByDestination.map((p) => (
                           <li
                             key={p.id}
-                            className="cursor-pointer hover:bg-accent rounded-sm px-2 py-1"
+                            className="cursor-pointer hover:bg-accent px-2 py-1 border-b border-gray-100"
                             onClick={() => {
                               setDestination(p);
                               setOpenDestination(false);
                               store.setDestinationProvince(p);
                             }}
                           >
-                            {p.name}
+                            {p.name} <br/><sub>{p?.nameEn}</sub>
                           </li>
                         ))}
                       </ul>
@@ -419,7 +419,7 @@ const Home = () => {
                 {store.originProvinceId && store.destinationProvinceId && (
                   <div className="grid grid-cols-2 gap-2 mt-2">
                     <div className="space-y-1.5">
-                      <label className="text-sm font-medium text-muted-foreground">จุดขึ้นรถ</label>
+                      <label className="text-sm font-medium text-muted-foreground">{t("จุดขึ้นรถ")}</label>
                       <Select
                         value={store.boardingPointId?.id}
                         onValueChange={(val) => {
@@ -438,7 +438,7 @@ const Home = () => {
                       </Select>
                     </div>
                     <div className="space-y-1.5">
-                      <label className="text-sm font-medium text-muted-foreground">จุดลงรถ</label>
+                      <label className="text-sm font-medium text-muted-foreground">{t("จุดลงรถ")}</label>
                       <Select
                         value={store.dropOffPointId?.id}
                         onValueChange={(val) => {
@@ -479,7 +479,7 @@ const Home = () => {
                 </div>
                 <div className="space-y-1.5">
                   <label className="text-sm font-medium text-muted-foreground flex items-center gap-1">
-                    จำนวนผู้โดยสาร
+                    {t("จำนวนผู้โดยสาร")}
                   </label>
                   <Select value={String(store.passengerCount)} onValueChange={(v) => store.setPassengerCount(Number(v))}>
                     <SelectTrigger className="h-12 border-none bg-transparent " style={{ borderBottom: "1px solid  #DDD", borderRadius: "0px" }} >

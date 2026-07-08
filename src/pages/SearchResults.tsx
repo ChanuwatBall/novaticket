@@ -14,6 +14,7 @@ import moment from "moment";
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerFooter } from "@/components/ui/drawer";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
+import { t } from "i18next";
 
 const SearchResults = () => {
   const navigate = useNavigate();
@@ -122,19 +123,19 @@ const SearchResults = () => {
   };
 
   return (
-    <BookingLayout currentStep={1} title="เลือกเที่ยวรถ" navto={() => navigate(-1)}>
+    <BookingLayout currentStep={1} title={t("เลือกเที่ยวรถ")} navto={() => navigate(-1)}>
       <div className="px-4">
         <div className="flex items-center gap-2 text-sm text-muted-foreground mb-4">
           <MapPin className="h-3.5 w-3.5" />
-          <span>{store.originProvinceId?.name} → {store.destinationProvinceId?.name}</span>
+          <span>{t(`${store.originProvinceId?.name}`)} → {t(`${store.destinationProvinceId?.name}`)}</span>
           <span className="ml-auto">{store.travelDate}</span>
         </div>
 
         {!trips || trips.length === 0 ? (
           <div className="text-center py-16 text-muted-foreground">
             <Bus className="h-12 w-12 mx-auto mb-3 opacity-40" />
-            <p className="font-medium">ไม่พบเที่ยวรถในเส้นทางนี้</p>
-            <p className="text-sm mt-1">กรุณาเลือกเส้นทางอื่น</p>
+            <p className="font-medium">{t("ไม่พบเที่ยวรถในเส้นทางนี้")}</p>
+            <p className="text-sm mt-1">{t("กรุณาเลือกเส้นทางอื่น")}</p>
           </div>
         ) : (
           <div className="space-y-3">
@@ -160,7 +161,7 @@ const SearchResults = () => {
                       <Badge variant="outline">{trip.bus_type_id?.name}</Badge>
                       <div className="flex items-center gap-1 ml-auto text-sm text-muted-foreground">
                         <Users className="h-3.5 w-3.5" />
-                        <span>ว่าง {trip.available_seats} ที่นั่ง</span>
+                        <span>{t("ว่าง")} {trip.available_seats} {t("ที่นั่ง")}</span>
                       </div>
                     </div>
                   </CardContent>

@@ -14,6 +14,7 @@ import Webcam from "react-webcam";
 import { useTesseract } from "react-tesseract";
 import { Ocr, TextDetections } from '@capacitor-community/image-to-text';
 import axios from "axios";
+import { t } from "i18next";
 
 const identityDocumentOptions = [
   { value: "id_card", label: "บัตรประชาชน" },
@@ -236,7 +237,7 @@ const UpdateProfile = () => {
         </button>
         <div className="flex items-center gap-2">
           <Bus className="h-6 w-6" />
-          <h1 className="text-lg font-bold tracking-tight">แก้ไขข้อมูลส่วนตัว</h1>
+          <h1 className="text-lg font-bold tracking-tight">{t("แก้ไขข้อมูลส่วนตัว")}</h1>
         </div>
       </header>
 
@@ -253,8 +254,8 @@ const UpdateProfile = () => {
                 <Camera className="h-4 w-4" />
               </div>
             </div>
-            <CardTitle className="text-xl">ข้อมูลส่วนตัว</CardTitle>
-            <p className="text-sm text-muted-foreground mt-1">อัปเดตข้อมูลของคุณให้เป็นปัจจุบัน</p>
+            <CardTitle className="text-xl">{t("ข้อมูลส่วนตัว")}</CardTitle>
+            <p className="text-sm text-muted-foreground mt-1">{t("อัปเดตข้อมูลของคุณให้เป็นปัจจุบัน")}</p>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-4">
@@ -276,11 +277,11 @@ const UpdateProfile = () => {
                   value={form.idType}
                   onChange={handleChange}
                   className="sr-only"
-                  aria-label="ประเภทเอกสาร"
+                  aria-label={t("ประเภทเอกสาร")}
                 >
                   {identityDocumentOptions.map((option) => (
                     <option key={option.value} value={option.value}>
-                      {option.label}
+                      {t(option.label)}
                     </option>
                   ))}
                 </select>
@@ -307,12 +308,12 @@ const UpdateProfile = () => {
                 </div>
               
               <div className="space-y-2">
-                <Label htmlFor="idNumber">{form.idType === "passport" ? "เลขหนังสือเดินทาง" : "เลขบัตรประชาชน"}</Label>
+                <Label htmlFor="idNumber">{form.idType === "passport" ? t("เลขหนังสือเดินทาง") : t("เลขบัตรประชาชน")}</Label>
                 <div className="flex gap-2">
                   <Input
                     id="idNumber"
                     name="idNumber"
-                    placeholder={form.idType === "passport" ? "กรอกเลขหนังสือเดินทาง" : "กรอกเลขบัตรประชาชน"}
+                    placeholder={form.idType === "passport" ? t("กรอกเลขหนังสือเดินทาง") : t("กรอกเลขบัตรประชาชน")}
                     value={form.idNumber}
                     onChange={handleChange}
                     maxLength={form.idType === "passport" ? 12 : 13}
@@ -326,14 +327,14 @@ const UpdateProfile = () => {
                     className="shrink-0"
                   >
                     <ScanLine className="mr-2 h-4 w-4" />
-                    {isRecognizing ? "กำลังสแกน..." : "Scan Card"}
+                    {isRecognizing ? t("กำลังสแกน...") : t("สแกนบัตร")}
                   </Button>
                 </div>
                 <Dialog open={showCamera} onOpenChange={setShowCamera}>
                   <DialogContent className="fixed inset-0 z-50 flex   w-screen max-w-none translate-x-0 translate-y-0 flex-col rounded-none border-0 bg-black p-0" 
                    style={{ height: "80vh", width: "100vw" }}>
                     <div className="flex items-center justify-between px-4 py-3 text-white">
-                      <p className="text-sm font-medium">ถ่ายภาพเอกสาร</p>
+                      <p className="text-sm font-medium">{t("ถ่ายภาพเอกสาร")}</p>
                       <button type="button" onClick={() => setShowCamera(false)} className="rounded-full p-1 hover:bg-white/10">
                         <X className="h-5 w-5" />
                       </button>
@@ -349,14 +350,14 @@ const UpdateProfile = () => {
                     </div>
                     <div className="border-t border-white/10 bg-black/90 p-4">
                       <Button type="button" onClick={handleCapture} disabled={isRecognizing} className="w-full">
-                        {isRecognizing ? "กำลังประมวลผล..." : "ถ่ายภาพ"}
+                        {isRecognizing ? t("กำลังประมวลผล...") : t("ถ่ายภาพ")}
                       </Button>
                     </div>
                   </DialogContent>
                 </Dialog>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="expiryDate">วันหมดอายุเอกสาร</Label>
+                <Label htmlFor="expiryDate">{t("วันหมดอายุเอกสาร")}</Label>
                 <Input
                   id="expiryDate"
                   name="expiryDate"
@@ -367,11 +368,11 @@ const UpdateProfile = () => {
               </div>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="fullName">ชื่อ-นามสกุล</Label>
+                <Label htmlFor="fullName">{t("ชื่อ-นามสกุล")}</Label>
                 <Input
                   id="fullName"
                   name="fullName"
-                  placeholder="กรอกชื่อ-นามสกุล"
+                  placeholder={t("กรอกชื่อ-นามสกุล")}
                   value={form.fullName}
                   onChange={handleChange}
                   required
@@ -379,9 +380,9 @@ const UpdateProfile = () => {
               </div>
               <div className="space-y-2">
                 <div className="flex justify-between items-center">
-                  <Label htmlFor="phone">เบอร์โทรศัพท์</Label>
+                  <Label htmlFor="phone">{t("เบอร์โทรศัพท์")}</Label>
                   {!form.phone && (
-                    <span className="text-[10px] text-destructive font-bold uppercase animate-pulse">Required</span>
+                    <span className="text-[10px] text-destructive font-bold uppercase animate-pulse">{t("Required")}</span>
                   )}
                 </div>
                 <Input
@@ -402,7 +403,7 @@ const UpdateProfile = () => {
                 )}
               </div>
               <div className="space-y-2">
-                <Label htmlFor="email">อีเมล</Label>
+                <Label htmlFor="email">{t("อีเมล")}</Label>
                 <Input
                   id="email"
                   name="email"
@@ -414,7 +415,7 @@ const UpdateProfile = () => {
                 />
               </div>
               <Button type="submit" className="w-full" size="lg" disabled={loading}>
-                {loading ? "กำลังบันทึก..." : "บันทึกการแก้ไข"}
+                {loading ? t("กำลังบันทึก...") : t("บันทึกการแก้ไข")}
               </Button>
             </form>
           </CardContent>

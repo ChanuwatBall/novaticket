@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import type { MealItem, PassengerMeal, MealSelection } from "@/store/bookingStore";
 import { UtensilsCrossed, Check } from "lucide-react";
+import { t } from "i18next";
 
 // const MENU: MealItem[] = [
 //   {
@@ -90,8 +91,8 @@ export default function MealModal({ open, onClose, seatNumber, passengerName, in
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent className="top-[46%] max-w-md w-[94vw] rounded-2xl p-0 border-none shadow-2xl max-h-[86dvh] flex flex-col overflow-hidden gap-0 sm:top-[50%]">
         <DialogHeader className="p-5 pb-4 bg-primary rounded-t-2xl shrink-0">
-          <DialogTitle className="text-white font-bold text-lg">เลือกอาหาร</DialogTitle>
-          <p className="text-white/80 text-xs mt-1">ผู้โดยสาร: {passengerName || `ที่นั่ง ${seatNumber}`}</p>
+          <DialogTitle className="text-white font-bold text-lg">{t("เลือกอาหาร")}</DialogTitle>
+          <p className="text-white/80 text-xs mt-1">{t("ผู้โดยสาร")}: {passengerName || `${t("ที่นั่ง")} ${seatNumber}`}</p>
         </DialogHeader>
 
         {mealGroups.length > 0 && (
@@ -104,7 +105,7 @@ export default function MealModal({ open, onClose, seatNumber, passengerName, in
                   onClick={() => scrollToCategory(group.category)}
                   className="h-8 rounded-full border border-primary/20 bg-primary/5 px-3 text-xs font-bold text-primary whitespace-nowrap hover:bg-primary/10"
                 >
-                  {group.category}
+                  {t(group.category)}
                 </button>
               ))}
             </div>
@@ -113,7 +114,7 @@ export default function MealModal({ open, onClose, seatNumber, passengerName, in
 
         {/* Items */}
         <div ref={listRef} className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-4 space-y-4 bg-slate-50">
-          <p className="text-[10px] uppercase font-bold text-muted-foreground mb-3">เลือกอาหารได้มากกว่า 1 รายการ</p>
+          <p className="text-[10px] uppercase font-bold text-muted-foreground mb-3">{t("เลือกอาหารได้มากกว่า 1 รายการ")}</p>
           {mealGroups.map(group => (
             <div
               key={group.category}
@@ -123,8 +124,8 @@ export default function MealModal({ open, onClose, seatNumber, passengerName, in
               className="scroll-mt-2"
             >
               <div className="mb-2 flex items-center justify-between">
-                <h3 className="text-sm font-extrabold text-slate-800">{group.category}</h3>
-                <span className="text-[10px] font-bold text-muted-foreground">{group.items.length} รายการ</span>
+                <h3 className="text-sm font-extrabold text-slate-800">{t(group.category)}</h3>
+                <span className="text-[10px] font-bold text-muted-foreground">{group.items.length} {t("รายการ")}</span>
               </div>
               <div className="space-y-2">
                 {group.items.map(item => {
@@ -139,7 +140,7 @@ export default function MealModal({ open, onClose, seatNumber, passengerName, in
                         <div className={`w-8 h-8 rounded-full flex items-center justify-center ${qty > 0 ? "bg-primary/10" : "bg-slate-100"}`}>
                           {qty > 0 ? <Check className={`h-4 w-4 text-primary`} /> : <UtensilsCrossed className="h-4 w-4 text-muted-foreground" />}
                         </div>
-                        <span className="font-medium text-sm">{item.name}</span>
+                        <span className="font-medium text-sm">{t(item.name)}</span>
                       </div>
                       <div className="flex items-center gap-2">
                         <div className="flex items-center gap-2">
@@ -159,7 +160,7 @@ export default function MealModal({ open, onClose, seatNumber, passengerName, in
           ))}
           {mealGroups.length === 0 && (
             <div className="rounded-xl border bg-white p-4 text-center text-sm text-muted-foreground">
-              ไม่มีรายการอาหาร
+              {t("ไม่มีรายการอาหาร")}
             </div>
           )}
         </div>
@@ -169,12 +170,12 @@ export default function MealModal({ open, onClose, seatNumber, passengerName, in
           <div className="space-y-2">
             <div className="rounded-xl p-2 bg-slate-50 border max-h-24 overflow-y-auto">
               {selected.length === 0 ? (
-                <p className="text-[10px] text-muted-foreground/70">ยังไม่ได้เลือกอาหาร</p>
+                <p className="text-[10px] text-muted-foreground/70">{t("ยังไม่ได้เลือกอาหาร")}</p>
               ) : (
                 <div className="space-y-1">
                   {selected.map(it => (
                     <div key={it.item.id} className="flex justify-between gap-3 text-sm">
-                      <span className="truncate">{it.item.name} x{it.qty}</span>
+                      <span className="truncate">{t(it.item.name)} x{it.qty}</span>
                       <span className="font-bold text-primary">฿{(it.item.price * it.qty).toLocaleString()}</span>
                     </div>
                   ))}
@@ -183,11 +184,11 @@ export default function MealModal({ open, onClose, seatNumber, passengerName, in
             </div>
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-[10px] text-muted-foreground">ราคาอาหารรวม</p>
+                <p className="text-[10px] text-muted-foreground">{t("ราคาอาหารรวม")}</p>
                 <p className="text-xl font-extrabold text-primary">฿{total.toLocaleString()}</p>
               </div>
               <Button onClick={handleConfirm} className="h-11 px-8 font-bold bg-primary hover:opacity-90 border-none text-white">
-                ตกลง
+                {t("ตกลง")}
               </Button>
             </div>
           </div>

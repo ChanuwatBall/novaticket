@@ -8,6 +8,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { QrCode, Wallet, ChevronDown, Bus } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import { t } from "i18next";
 
 const eWalletOptions = [
   { value: "wechat_pay_mpm", label: "WeChatPay", sublabel: "QR Code", icon: "/assets/icon/wechat.svg" },
@@ -102,37 +103,37 @@ const PaymentSection = () => {
 
   return (
     <div className="px-4 space-y-4">
-      <h3 className="text-lg font-bold">3. สรุปข้อมูลการจองและชำระเงิน</h3>
+      <h3 className="text-lg font-bold">3. {t("สรุปข้อมูลการจองและชำระเงิน")}</h3>
 
       <Card className="border-primary/20 bg-primary/5">
         <CardContent className="p-4 space-y-4">
           <div className="flex items-center justify-between pb-3 border-b border-primary/10">
             <h4 className="font-bold text-primary flex items-center gap-2">
-              <Bus className="h-4 w-4" /> รายละเอียดการเดินทาง
+              <Bus className="h-4 w-4" /> {t("รายละเอียดการเดินทาง")}
             </h4>
             <Badge variant="outline" className="bg-white">{store.selectedTrip?.bus_type_id?.name}</Badge>
           </div>
 
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-1">
-              <p className="text-[10px] uppercase text-muted-foreground font-bold leading-none">ต้นทาง ({store.originProvinceId?.name})</p>
-              <p className="text-[13px] font-bold leading-tight">{store.boardingPointId?.name || "จุดขึ้นรถหลัก"}</p>
+              <p className="text-[10px] uppercase text-muted-foreground font-bold leading-none">{t("ต้นทาง")} ({store.originProvinceId?.name})</p>
+              <p className="text-[13px] font-bold leading-tight">{store.boardingPointId?.name || t("จุดขึ้นรถหลัก")}</p>
               <p className="text-xs text-primary font-bold">{store.selectedTrip?.departure_time}</p>
             </div>
             <div className="space-y-1 text-right">
-              <p className="text-[10px] uppercase text-muted-foreground font-bold leading-none">ปลายทาง ({store.destinationProvinceId?.name})</p>
-              <p className="text-[13px] font-bold leading-tight">{store.dropOffPointId?.name || "จุดลงรถหลัก"}</p>
+              <p className="text-[10px] uppercase text-muted-foreground font-bold leading-none">{t("ปลายทาง")} ({store.destinationProvinceId?.name})</p>
+              <p className="text-[13px] font-bold leading-tight">{store.dropOffPointId?.name || t("จุดลงรถหลัก")}</p>
               <p className="text-xs text-primary font-bold">{store.selectedTrip?.arrival_time}</p>
             </div>
           </div>
 
           <div className="pt-3 border-t border-primary/10 space-y-3">
            <div className="space-y-2">
-              <span className="text-[10px] uppercase text-muted-foreground font-bold tracking-wider">รายการอาหารและอื่นๆ</span>
+            {store?.mealAddons && (totalMealCost > 0) &&(<span className="text-[10px] uppercase text-muted-foreground font-bold tracking-wider">{t("รายการอาหารและอื่นๆ")}</span>)}
             {store?.mealAddons && (totalMealCost > 0) && (
               <div className="mt-2 space-y-1">
                 {store?.mealAddons.map(addon => addon.items).flat().map(it => (
-                  <div key={it.item.id} className="flex justify-between text-[11px]"><span className="text-muted-foreground">{it.item.name} x{it.qty}</span><span className="font-bold text-primary">฿{(it.item.price * it.qty).toLocaleString()}</span></div>
+                  <div key={it.item.id} className="flex justify-between text-[11px]"><span className="text-muted-foreground">{t(it.item.name)} x{it.qty}</span><span className="font-bold text-primary">฿{(it.item.price * it.qty).toLocaleString()}</span></div>
                 ))}
                 {/* <div className="flex justify-between text-[11px] font-extrabold pt-1 border-t border-primary/20">
                   <span className="text-primary">รวมอาหาร</span>
@@ -143,7 +144,7 @@ const PaymentSection = () => {
             </div>
 
             <div className="space-y-2">
-              <span className="text-[10px] uppercase text-muted-foreground font-bold tracking-wider">ผู้โดยสารและที่นั่ง ({store.passengers.length} ท่าน)</span>
+              <span className="text-[10px] uppercase text-muted-foreground font-bold tracking-wider">{t("ผู้โดยสารและที่นั่ง")} ({store.passengers.length} {t("ท่าน")})</span>
               <div className="grid grid-cols-1 gap-2">
                 {store.passengers.map((p, i) => (
                   <div key={i} className="flex items-center justify-between bg-white/60 p-2 rounded-lg border border-primary/5 shadow-sm">
@@ -166,17 +167,17 @@ const PaymentSection = () => {
 
           <div className="pt-3 border-t border-primary/10 space-y-2">
             <div className="flex justify-between text-xs">
-              <span className="text-muted-foreground">ยอดรวม ({store.selectedSeats.length} ที่นั่ง)</span>
+              <span className="text-muted-foreground">{t("ยอดรวม")} ({store.selectedSeats.length} {t("ที่นั่ง")})</span>
               <span className="font-bold">฿{subtotal}</span>
             </div>
             {store.discount > 0 && (
               <div className="flex justify-between text-xs text-primary font-bold">
-                <span>ส่วนลดโปรโมชั่น</span>
+                <span>{t("ส่วนลดโปรโมชั่น")}</span>
                 <span>-฿{store.discount}</span>
               </div>
             )} 
             <div className="flex justify-between items-center pt-2 border-t border-primary/10">
-              <span className="font-black text-sm uppercase">รวมที่ต้องชำระ</span>
+              <span className="font-black text-sm uppercase">{t("รวมที่ต้องชำระ")}</span>
               <span className="text-xl font-black text-primary">฿{total}</span>
             </div>
           </div>
@@ -184,7 +185,7 @@ const PaymentSection = () => {
       </Card>
 
       <div className="space-y-3">
-        <label className="text-sm font-bold">เลือกวิธีชำระเงิน</label>
+        <label className="text-sm font-bold">{t("เลือกวิธีชำระเงิน")}</label>
         <RadioGroup
           value={store.paymentMethod}
           onValueChange={handlePaymentMethodChange}
@@ -195,8 +196,8 @@ const PaymentSection = () => {
             <Label htmlFor="qr-flow" className="flex items-center gap-2 cursor-pointer flex-1">
               <QrCode className="h-5 w-5 text-primary" />
               <div>
-                <div className="font-medium">QR PromptPay</div>
-                <div className="text-[10px] text-muted-foreground">สแกนจ่ายผ่าน Mobile Banking</div>
+                <div className="font-medium">{t("QR PromptPay")}</div>
+                <div className="text-[10px] text-muted-foreground">{t("สแกนจ่ายผ่าน Mobile Banking")}</div>
               </div>
             </Label>
           </div>
@@ -207,8 +208,8 @@ const PaymentSection = () => {
               <Label htmlFor="wallet-flow" className="flex items-center gap-2 cursor-pointer flex-1">
                 <Wallet className="h-5 w-5 text-primary" />
                 <div className="flex-1">
-                  <div className="font-medium">E-Wallet</div>
-                  <div className="text-[10px] text-muted-foreground">ชำระด้วย WeChat Pay</div>
+                  <div className="font-medium">{t("E-Wallet")}</div>
+                  <div className="text-[10px] text-muted-foreground">{t("ชำระด้วย WeChat Pay")}</div>
                 </div>
               </Label>
               {store.paymentMethod === "wallet" && (
@@ -233,7 +234,7 @@ const PaymentSection = () => {
       </div>
 
       <Button onClick={handleConfirmPayment} disabled={!isPayable} className="w-full h-14 text-lg font-bold shadow-lg" size="lg">
-        ชำระเงินรวม ฿{total}
+        {t("ชำระเงินรวม")} ฿{total}
       </Button>
     </div>
   );

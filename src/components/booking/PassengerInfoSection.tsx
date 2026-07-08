@@ -17,6 +17,7 @@ import { Tag, Ticket as TicketIcon, Check, User, Coins, Route, UtensilsCrossed }
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import MealModal from "./MealModal";
+import { t } from "i18next";
 
 interface PassengerInfoSectionProps {
   onContinue: () => void;
@@ -175,7 +176,7 @@ const PassengerInfoSection = ({ onContinue }: PassengerInfoSectionProps) => {
     }
     setPromoInput(coupon.promoCode);
     setShowCouponDialog(false);
-    toast.success(`แลกคูปอง ${coupon.title} สำเร็จ! ระบบได้เลือกใช้งานอัตโนมัติ`);
+    toast.success(`${t("แลกคูปอง")} ${coupon.title} ${t("สำเร็จ! ระบบได้เลือกใช้งานอัตโนมัติ")}`);
     doApplyPromo(coupon.promoCode);
   };
 
@@ -204,7 +205,7 @@ const PassengerInfoSection = ({ onContinue }: PassengerInfoSectionProps) => {
 
   return (
     <div className="px-4 space-y-4">
-      <h3 className="text-lg font-bold">ข้อมูลผู้โดยสาร</h3>
+      <h3 className="text-lg font-bold">{t("ข้อมูลผู้โดยสาร")}</h3>
 
       <Accordion type="multiple" defaultValue={passengers.map(p => p.seatId)} className="space-y-3">
         {passengers.map((p, i) => {
@@ -217,12 +218,12 @@ const PassengerInfoSection = ({ onContinue }: PassengerInfoSectionProps) => {
                   <div className="flex flex-col gap-0.5">
                     <span className="text-sm font-bold flex items-center gap-2">
                       <User className="h-3.5 w-3.5 text-primary" />
-                      ผู้โดยสาร #{i + 1} {p.fullName && `- ${p.fullName}`}
+                      {t("ผู้โดยสาร")} #{i + 1} {p.fullName && `- ${p.fullName}`}
                     </span>
-                    <span className="text-[10px] text-muted-foreground font-medium">ที่นั่ง {p.seatNumber}</span>
+                    <span className="text-[10px] text-muted-foreground font-medium">{t("ที่นั่ง")} {p.seatNumber}</span>
                   </div>
                   <Badge variant="outline" className="ml-auto bg-primary/5 text-primary border-primary/20">
-                    {passengerTypes.find(t => t.value === p.passengerType)?.label}
+                    {t(passengerTypes.find(t => t.value === p.passengerType)?.label)}
                   </Badge>
                 </div>
               </AccordionTrigger>
@@ -230,13 +231,13 @@ const PassengerInfoSection = ({ onContinue }: PassengerInfoSectionProps) => {
                 <div className="space-y-3">
                   <div className="grid gap-3">
                     <div className="space-y-1.5">
-                      <label className="text-[10px] uppercase font-bold text-muted-foreground ml-1">ชื่อ-นามสกุล</label>
-                      <Input placeholder="กรอกชื่อ-นามสกุล" value={p.fullName} onChange={(e) => updatePassenger(i, "fullName", e.target.value)} className="h-11 shadow-sm" />
+                      <label className="text-[10px] uppercase font-bold text-muted-foreground ml-1">{t("ชื่อ-นามสกุล")}</label>
+                      <Input placeholder={t("กรอกชื่อ-นามสกุล")} value={p.fullName} onChange={(e) => updatePassenger(i, "fullName", e.target.value)} className="h-11 shadow-sm" />
                     </div>
 
                     {(i === 0 || !applyAllPhone) && (
                       <div className="space-y-1.5">
-                        <label className="text-[10px] uppercase font-bold text-muted-foreground ml-1">เบอร์โทรศัพท์</label>
+                        <label className="text-[10px] uppercase font-bold text-muted-foreground ml-1">{t("เบอร์โทรศัพท์")}</label>
                         <Input placeholder="08X-XXX-XXXX" value={p.phone} onChange={(e) => updatePassenger(i, "phone", e.target.value.replace(/\D/g, "").slice(0, 10))} className="h-11 shadow-sm" inputMode="tel" />
                       </div>
                     )}
@@ -247,16 +248,16 @@ const PassengerInfoSection = ({ onContinue }: PassengerInfoSectionProps) => {
                           setApplyAllPhone(c as boolean);
                           if (c) setPassengers(prev => prev.map(p => ({ ...p, phone: passengers[0].phone })));
                         }} />
-                        <label htmlFor="apply-all" className="cursor-pointer font-medium text-muted-foreground">ใช้เบอร์นี้กับทุกคน</label>
+                        <label htmlFor="apply-all" className="cursor-pointer font-medium text-muted-foreground">{t("ใช้เบอร์นี้กับทุกคน")}</label>
                       </div>
                     )}
 
                     <div className="space-y-1.5">
-                      <label className="text-[10px] uppercase font-bold text-muted-foreground ml-1">ประเภทผู้โดยสาร</label>
+                      <label className="text-[10px] uppercase font-bold text-muted-foreground ml-1">{t("ประเภทผู้โดยสาร")}</label>
                       <Select value={p.passengerType} onValueChange={(v) => updatePassenger(i, "passengerType", v)}>
                         <SelectTrigger className="h-11 shadow-sm"><SelectValue /></SelectTrigger>
                         <SelectContent>
-                          {passengerTypes.map((t) => <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>)}
+                          {passengerTypes.map((pt) => <SelectItem key={pt.value} value={pt.value}>{t(pt.label)}</SelectItem>)}
                         </SelectContent>
                       </Select>
                     </div>
@@ -264,7 +265,7 @@ const PassengerInfoSection = ({ onContinue }: PassengerInfoSectionProps) => {
 
                   {/* Seat price row */}
                   <div className="bg-primary/5 rounded-lg p-2.5 flex justify-between items-center mt-2">
-                    <span className="text-[10px] font-bold text-primary uppercase">ราคาที่นั่งนี้</span>
+                    <span className="text-[10px] font-bold text-primary uppercase">{t("ราคาที่นั่งนี้")}</span>
                     <span className="text-sm font-bold text-primary">฿{tripPrice.toLocaleString()}</span>
                   </div>
 
@@ -273,7 +274,7 @@ const PassengerInfoSection = ({ onContinue }: PassengerInfoSectionProps) => {
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
                         <UtensilsCrossed className="h-4 w-4 text-primary" />
-                        <span className="text-xs font-bold text-primary">อาหารบนรถ</span>
+                        <span className="text-xs font-bold text-primary">{t("อาหารบนรถ")}</span>
                       </div>
                       <Button
                         size="sm"
@@ -281,7 +282,7 @@ const PassengerInfoSection = ({ onContinue }: PassengerInfoSectionProps) => {
                         className="h-7 text-[11px] font-bold border-primary/30 text-primary bg-white hover:bg-primary/5"
                         onClick={() => setMealModalSeatId(p.seatId)}
                       >
-                        {meal ? "เปลี่ยนอาหาร" : "+ เพิ่มอาหาร"}
+                        {meal ? t("เปลี่ยนอาหาร") : t("+ เพิ่มอาหาร")}
                       </Button>
                     </div>
                       {meal && (mealTotal > 0) ? (
@@ -290,12 +291,12 @@ const PassengerInfoSection = ({ onContinue }: PassengerInfoSectionProps) => {
                             <div key={it.item.id} className="flex justify-between text-[11px]"><span className="text-muted-foreground">{it.item.name} x{it.qty}</span><span className="font-bold text-primary">฿{(it.item.price * it.qty).toLocaleString()}</span></div>
                           ))}
                           <div className="flex justify-between text-[11px] font-extrabold pt-1 border-t border-primary/20">
-                            <span className="text-primary">รวมอาหาร</span>
+                            <span className="text-primary">{t("รวมอาหาร")}</span>
                             <span className="text-primary">฿{mealTotal}</span>
                           </div>
                         </div>
                       ) : (
-                        <p className="text-[10px] text-primary/60 mt-1">ยังไม่ได้เลือกอาหาร</p>
+                        <p className="text-[10px] text-primary/60 mt-1">{t("ยังไม่ได้เลือกอาหาร")}</p>
                       )}
                   </div>
                 </div>
@@ -309,11 +310,11 @@ const PassengerInfoSection = ({ onContinue }: PassengerInfoSectionProps) => {
         <CardContent className="p-4">
           <div className="flex justify-between items-center mb-2">
             <label className="text-sm font-bold flex items-center gap-1.5">
-              <Tag className="h-3.5 w-3.5 shrink-0" /> โปรโมชั่นและคูปอง
+              <Tag className="h-3.5 w-3.5 shrink-0" /> {t("โปรโมชั่นและคูปอง")}
             </label>
             {redeemableCoupons.length > 0 && (
               <Button variant="outline" size="sm" className="h-7 text-[10px] font-bold text-amber-600 border-amber-200 bg-amber-50 hover:bg-amber-100 hover:text-amber-700 shrink-0" onClick={() => setShowCouponDialog(true)}>
-                <Coins className="h-3 w-3 mr-1" /> แลกด้วยพอยท์
+                <Coins className="h-3 w-3 mr-1" /> {t("แลกด้วยพอยท์")}
               </Button>
             )}
           </div>
@@ -345,40 +346,40 @@ const PassengerInfoSection = ({ onContinue }: PassengerInfoSectionProps) => {
               </div>
             ))}
             {promotions.length === 0 && (
-              <p className="text-xs text-muted-foreground py-2 text-center w-full">ไม่มีโปรโมชั่นที่เลือกได้ในขณะนี้</p>
+              <p className="text-xs text-muted-foreground py-2 text-center w-full">{t("ไม่มีโปรโมชั่นที่เลือกได้ในขณะนี้")}</p>
             )}
           </div>
 
-          <label className="text-sm font-bold flex items-center gap-1.5 mb-2">หรือระบุรหัสโปรโมชั่น</label>
+          <label className="text-sm font-bold flex items-center gap-1.5 mb-2">{t("หรือระบุรหัสโปรโมชั่น")}</label>
           <div className="flex gap-2">
-            <Input placeholder="กรอกรหัส" value={promoInput} onChange={(e) => { setPromoInput(e.target.value); setPromoApplied(false); setPromoError(""); }} className="h-12 flex-1 border-dashed" />
-            <Button onClick={applyPromo} variant="outline" className="h-12 px-6">ใช้โค้ด</Button>
+            <Input placeholder={t("กรอกรหัส")} value={promoInput} onChange={(e) => { setPromoInput(e.target.value); setPromoApplied(false); setPromoError(""); }} className="h-12 flex-1 border-dashed" />
+            <Button onClick={applyPromo} variant="outline" className="h-12 px-6">{t("ใช้โค้ด")}</Button>
           </div>
           {promoError && <p className="text-xs text-destructive mt-1">{promoError}</p>}
-          {promoApplied && <p className="text-xs text-primary mt-1 font-medium italic">✓ ใช้โค้ดสำเร็จ ลดเพิ่ม ฿{store.discount}</p>}
+          {promoApplied && <p className="text-xs text-primary mt-1 font-medium italic">✓ {t("ใช้โค้ดสำเร็จ ลดเพิ่ม")} ฿{store.discount}</p>}
         </CardContent>
       </Card>
 
       {/* Summary */}
       <div className="bg-slate-50 border rounded-xl p-4 space-y-1 text-sm shadow-inner">
         <div className="flex justify-between">
-          <span>ราคาสุทธิ (รายที่นั่ง)</span>
+          <span>{t("ราคาสุทธิ")} ({t("รายที่นั่ง")})</span>
           <span>฿{subtotal.toLocaleString()}</span>
         </div>
         {totalMealCost > 0 && (
           <div className="flex justify-between text-primary font-medium">
-            <span>ค่าอาหารบนรถ</span>
+            <span>{t("ค่าอาหารบนรถ")}</span>
             <span>+฿{totalMealCost.toLocaleString()}</span>
           </div>
         )}
         {store.discount > 0 && (
           <div className="flex justify-between text-primary font-bold">
-            <span>{redeemableCoupons.find(c => c.promoCode === promoInput?.toUpperCase()) ? 'ส่วนลดจากคูปองพอยท์' : promoInput?.toUpperCase() === 'FREERIDE10' ? 'สิทธิ์นั่งฟรี 1 เที่ยว' : 'ส่วนลดโปรโมชั่น'}</span>
+            <span>{redeemableCoupons.find(c => c.promoCode === promoInput?.toUpperCase()) ? t("ส่วนลดจากคูปองพอยท์") : promoInput?.toUpperCase() === 'FREERIDE10' ? t("สิทธิ์นั่งฟรี 1 เที่ยว") : t("ส่วนลดโปรโมชั่น")}</span>
             <span>-฿{store.discount}</span>
           </div>
         )}
         <div className="flex justify-between font-extrabold text-base pt-2 border-t mt-1">
-          <span>รวมยอดที่ต้องชำระ</span>
+          <span>{t("รวมยอดที่ต้องชำระ")}</span>
           <span className="text-primary text-lg">฿{grandTotal.toLocaleString()}</span>
         </div>
       </div>
@@ -388,11 +389,11 @@ const PassengerInfoSection = ({ onContinue }: PassengerInfoSectionProps) => {
         <DialogContent className="max-w-md w-[95vw] rounded-2xl mx-auto flex flex-col gap-0 p-0 border-none shadow-xl max-h-[80vh]">
           <DialogHeader className="p-5 pb-3 border-b bg-amber-50/50 rounded-t-2xl">
             <DialogTitle className="text-left font-bold text-lg flex items-center gap-2 text-amber-800">
-              <Coins className="h-5 w-5 text-amber-500" /> แลกคูปองด้วยพอยท์
+              <Coins className="h-5 w-5 text-amber-500" /> {t("แลกคูปองด้วยพอยท์")}
             </DialogTitle>
             <DialogDescription className="text-left text-xs text-amber-700/70">
-              สะสมพอยท์คงเหลือของคุณ: <span className="font-bold text-amber-700">
-                {userPointsValue?.totalPoints} พอยท์
+              {t("สะสมพอยท์คงเหลือของคุณ")}: <span className="font-bold text-amber-700">
+                {userPointsValue?.totalPoints} {t("พอยท์")}
               </span>
             </DialogDescription>
           </DialogHeader>
@@ -403,10 +404,10 @@ const PassengerInfoSection = ({ onContinue }: PassengerInfoSectionProps) => {
                   <div className="bg-amber-100 p-2 rounded-full shrink-0"><Coins className="h-4 w-4 text-amber-600" /></div>
                   <div>
                     <h4 className="font-bold text-sm text-slate-800 leading-none mb-1.5">{coupon.title}</h4>
-                    <p className="text-[10px] text-amber-600 font-bold bg-amber-50 px-1.5 py-0.5 rounded border border-amber-100 inline-block">ใช้ {coupon.pointsRequired} พอยท์</p>
+                    <p className="text-[10px] text-amber-600 font-bold bg-amber-50 px-1.5 py-0.5 rounded border border-amber-100 inline-block">{t("ใช้")} {coupon.pointsRequired} {t("พอยท์")}</p>
                   </div>
                 </div>
-                <Button onClick={() => handleRedeemCoupon(coupon)} size="sm" className="bg-amber-500 hover:bg-amber-600 h-8 text-xs font-bold text-white shadow-sm shrink-0">แลกเลย</Button>
+                <Button onClick={() => handleRedeemCoupon(coupon)} size="sm" className="bg-amber-500 hover:bg-amber-600 h-8 text-xs font-bold text-white shadow-sm shrink-0">{t("แลกเลย")}</Button>
               </div>
             ))}
           </div>
@@ -428,7 +429,7 @@ const PassengerInfoSection = ({ onContinue }: PassengerInfoSectionProps) => {
       )}
 
       <Button onClick={handleContinue} disabled={!allValid} className="w-full h-12 text-base font-bold">
-        ยืนยันข้อมูลผู้โดยสาร
+        {t("ยืนยันข้อมูลผู้โดยสาร")}
       </Button>
     </div>
   );

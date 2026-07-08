@@ -28,8 +28,8 @@ import UpdateProfile from "./pages/UpdateProfile";
 import SearchBooking from "./pages/SearchBooking";
 import NotFound from "./pages/NotFound";
 import BottomNav from "./components/BottomNav";
-import PromotionDetail from "./pages/PromotionDetail";
-import BusStop from "./pages/BusStop";
+import PromotionDetail from "./pages/PromotionDetail"; 
+import TrackBus from "./pages/TrackBus";
 import { getPreferences, loginWithLine, refreshToken } from "./services/api";
 import { applyPreferences, resolvePreferences, storePreferences } from "./lib/preferences";
 import { applyRemoteLanguageResources } from "./i18n/remoteResources";
@@ -221,8 +221,7 @@ const App = () => {
             <Route path="/my-tickets" element={<MyTickets />} />
             <Route path="/my-tickets/:ticketId" element={<TicketDetail />} />
             <Route path="/promotions" element={<Promotions />} />
-            <Route path="/promotions/:promoId" element={<PromotionDetail />} />
-            <Route path="/busstop" element={<BusStop />} />
+            <Route path="/promotions/:promoId" element={<PromotionDetail />} /> 
             <Route path="/profile" element={<Profile />} />
             <Route path="/update-profile" element={<UpdateProfile />} />
             <Route path="/points" element={<Points />} />
@@ -230,6 +229,7 @@ const App = () => {
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
             <Route path="/search-booking" element={<SearchBooking />} />
+            <Route path="/track" element={<TrackBus />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
           <BottomNav />

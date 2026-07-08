@@ -7,6 +7,7 @@ import SearchResultsSection from "@/components/booking/SearchResultsSection";
 import SeatSelectionSection from "@/components/booking/SeatSelectionSection";
 import PassengerInfoSection from "@/components/booking/PassengerInfoSection";
 import PaymentSection from "@/components/booking/PaymentSection";
+import { t } from "i18next";
 
 const BookingFlow = () => {
   const navigate = useNavigate();
@@ -50,13 +51,13 @@ const BookingFlow = () => {
   }, [store.selectedTrip, store.selectedSeats.length, store.passengers.length]);
 
   const stepTitles: Record<number, string> = {
-    1: "เลือกเที่ยวรถ",
-    2: "เลือกที่นั่งและข้อมูลผู้โดยสาร",
-    3: "ชำระเงิน"
+    1: t("เลือกเที่ยวรถ"),
+    2: t("เลือกที่นั่งและข้อมูลผู้โดยสาร"),
+    3: t("ชำระเงิน")
   };
 
   return (
-    <BookingLayout currentStep={currentStep} title={stepTitles[currentStep] || "จองตั๋ว"}>
+    <BookingLayout currentStep={currentStep} title={stepTitles[currentStep] || t("จองตั๋ว")}>
       <div className="flex flex-col pb-32">
         {/* Step 1: Select Trip */}
         <div id="step-1" className="scroll-mt-32 min-h-[calc(100vh-160px)] py-4 pt-0">

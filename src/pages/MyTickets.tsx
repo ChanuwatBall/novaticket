@@ -4,11 +4,12 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { QrCode, MapPin, Clock, ChevronRight } from "lucide-react";
+import { QrCode, MapPin, Clock, ChevronRight, Navigation } from "lucide-react";
 import { useEffect, useState } from "react";
 import moment from "moment";
-import { bookingList } from "@/services/api";
+import { bookingDetail, bookingList } from "@/services/api";
 import { toast } from "sonner";
+import { t } from "i18next";
 
 const mockTickets = [
   {
@@ -59,14 +60,15 @@ type Ticket = {
     "paymentStatus": string
     "expiresAt": string
     "total": number
+    "tripId"?: string
 }
 
 export const statusConfig: Record<string, { label: string, variant: "default" | "success" | "destructive" | "outline" | "secondary" }> = {
-  pending: { label: "รอชำระเงิน", variant: "secondary" },
-  upcoming: { label: "กำลังจะถึง", variant: "default" },
-  confirmed: { label: "เสร็จสิ้น", variant: "success" },
-  cancelled: { label: "ยกเลิก", variant: "destructive" },
-  expired: { label: "หมดเวลาชำระเงิน", variant: "outline" },
+  pending: { label:  "รอชำระเงิน", variant: "secondary" },
+  upcoming: { label:  "กำลังจะถึง", variant: "default" },
+  confirmed: { label:  "เสร็จสิ้น", variant: "success" },
+  cancelled: { label:  "ยกเลิก", variant: "destructive" },
+  expired: { label:  "หมดเวลาชำระเงิน", variant: "outline" },
 };
 
 const getTicketStatus = (ticket: any) => {
@@ -97,6 +99,7 @@ const MyTicketsPage = () => {
   const [tickets, setTickets] = useState<Ticket[]>([])
   const [pagination, setPagination] = useState({ page: 1, totalPages: 1 })
   const [loading, setLoading] = useState(false)
+  const [trackingTicketId, setTrackingTicketId] = useState<string | null>(null)
 
   const getTickets = async (page = 1) => {
     if (loading) return;
@@ -128,16 +131,39 @@ const MyTicketsPage = () => {
   useEffect(() => {
     getTickets(1)
   }, [])
+
+  const handleTrackTicket = async (ticket: Ticket) => {
+    setTrackingTicketId(ticket.id);
+    try {
+      const detail = ticket.tripId ? ticket : await bookingDetail({ id: ticket.id });
+      if (!detail?.tripId) {
+        toast.error("ไม่พบรหัสเที่ยวรถสำหรับติดตามตำแหน่ง");
+        return;
+      }
+
+      const params = new URLSearchParams({
+        tripId: detail.tripId,
+        bookingReference: detail.bookingReference || ticket.bookingReference,
+      });
+      navigate(`/track?${params.toString()}`);
+    } catch (error) {
+      console.error("track ticket error", error);
+      toast.error(t("ไม่สามารถเปิดหน้าติดตามรถได้"));
+    } finally {
+      setTrackingTicketId(null);
+    }
+  };
+
   return (
-    <BookingLayout showSteps={false} title="ตั๋วของฉัน" navto={() => navigate(-1)}  >
+    <BookingLayout showSteps={false} title={t("ตั๋วของฉัน")} navto={() => navigate(-1)}  >
       <div className="px-4">
         <Tabs defaultValue="upcoming">
           <TabsList className="w-full mb-4 overflow-x-auto justify-start scrollbar-hide">
-            <TabsTrigger value="upcoming" className="flex-1 text-xs whitespace-nowrap">กำลังจะถึง</TabsTrigger>
-            <TabsTrigger value="pending" className="flex-1 text-xs whitespace-nowrap">รอชำระเงิน</TabsTrigger>
-            <TabsTrigger value="confirmed" className="flex-1 text-xs whitespace-nowrap">เสร็จสิ้น</TabsTrigger>
-            <TabsTrigger value="failed" className="flex-1 text-xs whitespace-nowrap">ไม่สำเร็จ</TabsTrigger>
-            <TabsTrigger value="all" className="flex-1 text-xs whitespace-nowrap">ทั้งหมด</TabsTrigger>
+            <TabsTrigger value="upcoming" className="flex-1 text-xs whitespace-nowrap">{t("กำลังจะถึง")}</TabsTrigger>
+            <TabsTrigger value="pending" className="flex-1 text-xs whitespace-nowrap">{t("รอชำระเงิน")}</TabsTrigger>
+            <TabsTrigger value="confirmed" className="flex-1 text-xs whitespace-nowrap">{t("เสร็จสิ้น")}</TabsTrigger>
+            <TabsTrigger value="failed" className="flex-1 text-xs whitespace-nowrap">{t("ไม่สำเร็จ")}</TabsTrigger>
+            <TabsTrigger value="all" className="flex-1 text-xs whitespace-nowrap">{t("ทั้งหมด")}</TabsTrigger>
           </TabsList>
 
           {["upcoming", "pending", "confirmed", "failed", "all"].map((tab) => (
@@ -149,38 +175,56 @@ const MyTicketsPage = () => {
                   if (tab === "failed") return statusKey === "cancelled" || statusKey === "expired";
                   return statusKey === tab;
                 })
-                .map((ticket) => (
-                  <Link key={ticket.id} to={`/my-tickets/${ticket.id}`}>
-                    <Card className={`cursor-pointer hover:ring-2 hover:ring-primary/20 transition-all mb-4 ${ticket.status}`}>
-                      <CardContent className="p-4">
-                        <div className="flex items-start justify-between mb-2">
-                          <div>
-                            <p className="text-xs text-muted-foreground">#{ ticket.bookingReference  }</p>
-                            <div className="flex items-center gap-1.5 mt-1">
-                              <MapPin className="h-3.5 w-3.5 text-primary" />
-                              <span className="font-bold">{ticket.origin} → {ticket.destination}</span>
+                .map((ticket) => {
+                  const ticketStatus = getTicketStatus(ticket);
+                  return (
+                    <Link key={ticket.id} to={`/my-tickets/${ticket.id}`}>
+                      <Card className={`cursor-pointer hover:ring-2 hover:ring-primary/20 transition-all mb-4 ${ticket.status}`}>
+                        <CardContent className="p-4">
+                          <div className="flex items-start justify-between mb-2">
+                            <div>
+                              <p className="text-xs text-muted-foreground">#{ ticket.bookingReference  }</p>
+                              <div className="flex items-center gap-1.5 mt-1">
+                                <MapPin className="h-3.5 w-3.5 text-primary" />
+                                <span className="font-bold">{t(ticket.origin)} → {t(ticket.destination)}</span>
+                              </div>
                             </div>
+                            <Badge variant={ticketStatus.variant}>
+                              {t(ticketStatus.label)}
+                            </Badge>
                           </div>
-                          <Badge variant={getTicketStatus(ticket).variant}>
-                            {getTicketStatus(ticket).label}
-                          </Badge>
-                        </div>
-                        <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                          <span>{ticket.date}</span>
-                          <span className="flex items-center gap-1">
-                            <Clock className="h-3 w-3" />
-                            {ticket.departureTime}
-                          </span>
-                          <span>ที่นั่ง {ticket.seats.map((seat) => seat).join(", ")}</span>
-                        </div>
-                        <div className="flex items-center justify-between mt-2 pt-2 border-t border-border">
-                          <span className="font-bold text-primary">฿{ticket?.total}</span>
-                          <ChevronRight className="h-4 w-4 text-muted-foreground" />
-                        </div>
-                      </CardContent>
-                    </Card>
-                  </Link>
-                ))}
+                          <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                            <span>{ticket.date}</span>
+                            <span className="flex items-center gap-1">
+                              <Clock className="h-3 w-3" />
+                              {ticket.departureTime}
+                            </span>
+                            <span>{t("ที่นั่ง")} {ticket.seats.map((seat) => seat).join(", ")}</span>
+                          </div>
+                          <div className="flex items-center justify-between mt-2 pt-2 border-t border-border gap-3">
+                            <span className="font-bold text-primary">฿{ticket?.total}</span>
+                            {ticketStatus.key === "upcoming" && ticket.paymentStatus === "paid" ? (
+                              <button 
+                                className="h-9 rounded-full px-3 text-xs flex flex-row items-center gap-1 font-bold text-primary border border-primary/20 bg-primary/5 hover:bg-primary/10 transition-all"
+                                disabled={trackingTicketId === ticket.id}
+                                onClick={(event) => {
+                                  event.preventDefault();
+                                  event.stopPropagation();
+                                  handleTrackTicket(ticket);
+                                }}
+                              >
+                                <Navigation className="mr-1.5 h-3.5 w-3.5" />
+                                {trackingTicketId === ticket.id ? t("กำลังเปิด...") : t("ดูตำแหน่งรถ")}
+                              </button>
+                            ) : (
+                              <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                            )}
+                          </div>
+                        </CardContent>
+                      </Card>
+                    </Link>
+                  );
+                })}
 
               {pagination.page < pagination.totalPages && (
                 <div className="py-4 text-center">
@@ -190,7 +234,7 @@ const MyTicketsPage = () => {
                     disabled={loading}
                     className="w-full h-11"
                   >
-                    {loading ? "กำลังโหลด..." : "โหลดเพิ่มเติม"}
+                    {loading ? t("กำลังโหลด...") : t("โหลดเพิ่มเติม")}
                   </Button>
                 </div>
               )}

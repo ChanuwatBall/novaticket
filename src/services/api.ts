@@ -149,6 +149,22 @@ export const createBooking = async (body: NewBooking) => {
     })
 }
 
+// curl '/api/trips/{id}/driver-location' \
+//   --header 'Authorization: Bearer YOUR_SECRET_TOKEN'
+
+export const getDriverLocation = async (tripId: string) => {
+  return await api.get(`/api/trips/${tripId}/driver-location`, {
+    headers: getAuthHeaders()
+  })
+    .then((res) => {
+      console.log("getDriverLocation res ", res)
+      return res.data
+    })
+    .catch((err) => {
+      console.log("getDriverLocation err ", err)
+      return getErrorData(err)
+    })
+}
  
 export const updatePassengerLocation = async (tripId: string, body: { latitude: number, longitude: number, accuracy_m: number }) => {
   return await api.post(`/api/trips/${tripId}/passenger-location`, body, {

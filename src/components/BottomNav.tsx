@@ -1,15 +1,15 @@
 import { Link, useLocation } from 'react-router-dom';
-import { Home, Search, Tag, Ticket, User , MapPinned } from 'lucide-react';
+import { Home, Tag, Ticket, User, MapPinned } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { t } from 'i18next';
 
 const navItems = [
-  { to: '/', label: t('หน้าแรก'), icon: Home },
-  // { to: '/busstop', label: t('จุดจอด'), icon: MapPinned },
-  // { to: '/ticket', label: t('ค้นหา'), icon: Search },
-  { to: '/promotions', label: t('โปรโมชั่น'), icon: Tag },
-  { to: '/my-tickets', label: t('ตั๋วของฉัน'), icon: Ticket },
-  { to: '/profile', label: t('โปรไฟล์'), icon: User },
+  { to: '/', label: t("หน้าแรก"), icon: Home },
+  { to: '/track', label: t("ติดตามรถ"), icon: MapPinned },
+  // { to: '/ticket', label: t("ค้นหา"), icon: Search },
+  { to: '/promotions', label: t("โปรโมชั่น"), icon: Tag },
+  { to: '/my-tickets', label: t("ตั๋วของฉัน"), icon: Ticket },
+  { to: '/profile', label: t("โปรไฟล์"), icon: User },
 ];
 
 // Hide bottom nav on these booking-flow routes
@@ -32,7 +32,7 @@ const BottomNav = () => {
   }
 
   return (
-    <nav className="fixed bottom-0 w-full z-50 bg-card border-t border-border shadow-lg" style={{ zIndex: "99" }}>
+    <nav className="fixed bottom-0 w-full z-[1200] bg-card border-t border-border shadow-lg">
       <div className="flex justify-around items-center h-16">
         {navItems.map(({ to, label, icon: Icon }) => {
           const active = pathname === to;

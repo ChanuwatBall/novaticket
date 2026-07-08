@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { QrCode, MapPin, Clock, Bus, User, CreditCard, ArrowLeft, Download, Mail, Phone, IdCard, AlertCircle, Check as CheckIcon } from "lucide-react";
+import { QrCode, MapPin, Clock, Bus, User, CreditCard, ArrowLeft, Download, Mail, Phone, IdCard, AlertCircle, Check as CheckIcon, Navigation } from "lucide-react";
 import { useBookingStore } from "@/store/bookingStore";
 import { useEffect, useState } from "react";
 import { bookingDetail, cancelBooking, cancelCharge, checkinSelf, getProvinces, getTripDetail, searchTrips } from "@/services/api";
@@ -13,13 +13,14 @@ import QRCode from "qrcode";
 import moment from "moment";
 import { useToast } from "@/components/ui/use-toast";
 import "../css/TicketDetail.css"
+import { t } from "i18next";
 
 const statusConfig: Record<string, { label: string, variant: "default" | "success" | "destructive" | "outline" | "secondary" }> = {
-  pending: { label: "รอชำระเงิน", variant: "secondary" },
-  upcoming: { label: "กำลังจะถึง", variant: "default" },
-  confirmed: { label: "เสร็จสิ้น", variant: "success" },
-  cancelled: { label: "ยกเลิก", variant: "destructive" },
-  expired: { label: "หมดเวลาชำระเงิน", variant: "outline" },
+  pending: { label:  "รอชำระเงิน", variant: "secondary" },
+  upcoming: { label:  "กำลังจะถึง", variant: "default" },
+  confirmed: { label:  "เสร็จสิ้น", variant: "success" },
+  cancelled: { label:  "ยกเลิก", variant: "destructive" },
+  expired: { label:  "หมดเวลาชำระเงิน", variant: "outline" },
 };
 
 const getTicketStatus = (ticket: any) => {
@@ -226,8 +227,8 @@ const TicketDetail = () => {
     const departureTime = moment(`${ticket.date} ${ticket.departureTime}`, "YYYY-MM-DD HH:mm");
     if (moment().isBefore(departureTime)) {
       toast({
-        title: "ยังไม่ถึงเวลาเดินทาง",
-        description: `คุณสามารถเช็คอินได้ใน วันที่ ${ticket.date} เวลา ${ticket.departureTime} น.`,
+        title: t("ยังไม่ถึงเวลาเดินทาง"),
+        description: `${t("คุณสามารถเช็คอินได้ใน")} ${t("วันที่")} ${ticket.date} ${t("เวลา")} ${ticket.departureTime} ${t("น.")}  `,
         variant: "destructive",
       });
       return;
@@ -242,22 +243,22 @@ const TicketDetail = () => {
       console.log("Check-in result:", res);
       if (res.status === "success" || res.success) {
         toast({
-          title: "เช็คอินสำเร็จ",
-          description: "ขอให้คุณมีความสุขกับการเดินทาง",
+          title: t("เช็คอินสำเร็จ"),
+          description: t("ขอให้คุณมีความสุขกับการเดินทาง"),
         });
         fetchTicket(false); // Refresh status
       } else {
         toast({
-          title: "เช็คอินไม่สำเร็จ",
-          description: res.message || "เกิดข้อผิดพลาดบางอย่าง",
+          title: t("เช็คอินไม่สำเร็จ"),
+          description: res.message || t("เกิดข้อผิดพลาดบางอย่าง"),
           variant: "destructive",
         });
       }
     } catch (error) {
       console.error("Check-in error:", error);
       toast({
-        title: "เกิดข้อผิดพลาด",
-        description: "ไม่สามารถเชื่อมต่อกับเซิร์ฟเวอร์ได้",
+        title: t("เกิดข้อผิดพลาด"),
+        description: t("ไม่สามารถเชื่อมต่อกับเซิร์ฟเวอร์ได้"),
         variant: "destructive",
       });
     } finally {
@@ -265,8 +266,17 @@ const TicketDetail = () => {
     }
   };
 
+  const handleTrackBus = () => {
+    if (!ticket?.tripId) return;
+    const params = new URLSearchParams({
+      tripId: ticket.tripId,
+      bookingReference: ticket.bookingReference || "",
+    });
+    navigate(`/track?${params.toString()}`);
+  };
+
   return (
-    <BookingLayout showSteps={false} title="รายละเอียดตั๋ว" navto={() => navigate(-1)} >
+    <BookingLayout showSteps={false} title={t("รายละเอียดตั๋ว")} navto={() => navigate(-1)} >
       <div className="px-4 space-y-4 pb-6">
         {/* Continue Payment Action */}
         {ticket.paymentStatus === "pending" && ticket.status === "pending" && moment().isBefore(moment(ticket.expiresAt)) && (
@@ -277,12 +287,12 @@ const TicketDetail = () => {
                   <AlertCircle className="h-5 w-5 text-amber-600" />
                 </div>
                 <div>
-                  <p className="font-bold text-amber-900">รอการชำระเงิน</p>
-                  <p className="text-xs text-amber-700">กรุณาชำระเงินเพื่อยืนยันการจองตั๋วของคุณ</p>
+                  <p className="font-bold text-amber-900">{t("รอการชำระเงิน")}</p>
+                  <p className="text-xs text-amber-700">{t("กรุณาชำระเงินเพื่อยืนยันการจองตั๋วของคุณ")}</p>
                 </div>
               </div>
               <Button onClick={handleContinuePayment} className="w-full bg-amber-600 hover:bg-amber-700 text-white font-bold h-11">
-                ดำเนินการชำระเงินต่อ
+                {t("ดำเนินการชำระเงินต่อ")}
               </Button>
             </CardContent>
           </Card>
@@ -293,11 +303,11 @@ const TicketDetail = () => {
           <div className={`${ticket.status === "pending" || ticket.status === "confirmed" ? "bg-primary" : "bg-gray-400"} text-primary-foreground px-4 py-4`}>
             <div className="flex items-center justify-between mb-2">
               <span className="text-xs opacity-80">#{ticket.bookingReference}</span>
-              <Badge variant={statusInfo.variant} className="text-xs">{statusInfo.label}</Badge>
+              <Badge variant={statusInfo.variant} className="text-xs">{t(statusInfo.label)}</Badge>
             </div>
             <div className="flex items-center gap-2 text-lg font-bold">
               <MapPin className="h-5 w-5 shrink-0" />
-              {ticket.origin} → {ticket.destination}
+              {t(ticket.origin)} → {t(ticket.destination)}
             </div>
             <p className="text-sm opacity-80 mt-1">{ticket.routeName} · {ticket.tripType}</p>
           </div>
@@ -313,7 +323,7 @@ const TicketDetail = () => {
                   <Skeleton className="h-40 w-40" />
                 )}
               </div>
-              <p className="text-xs text-muted-foreground">แสดง QR Code นี้เมื่อขึ้นรถ</p>
+              <p className="text-xs text-muted-foreground">{t("แสดง QR Code นี้เมื่อขึ้นรถ")}</p>
             </div>
           ) : <></>}
         </Card>
@@ -323,18 +333,18 @@ const TicketDetail = () => {
           <CardContent className="p-4 space-y-3">
             <h3 className="font-bold text-base flex items-center gap-2">
               <Clock className="h-4 w-4 text-primary" />
-              ข้อมูลเที่ยวรถ
+              {t("ข้อมูลเที่ยวรถ")}
             </h3>
             <div className="grid grid-cols-2 gap-y-2 text-sm">
-              <span className="text-muted-foreground">วันที่เดินทาง</span>
+              <span className="text-muted-foreground">{t("วันที่เดินทาง")}</span>
               <span className="text-right font-medium">{ticket.date}</span>
-              <span className="text-muted-foreground">เวลาออก</span>
+              <span className="text-muted-foreground">{t("เวลาออก")}</span>
               <span className="text-right font-medium">{ticket.departureTime} น.</span>
-              <span className="text-muted-foreground">เวลาถึง (โดยประมาณ)</span>
+              <span className="text-muted-foreground">{t("เวลาถึง (โดยประมาณ)")}</span>
               <span className="text-right font-medium">{ticket.arrivalTime} น.</span>
-              <span className="text-muted-foreground">จุดขึ้นรถ</span>
+              <span className="text-muted-foreground">{t("จุดขึ้นรถ")}</span>
               <span className="text-right font-medium">{ticket.boardingPoint}</span>
-              <span className="text-muted-foreground">จุดลงรถ</span>
+              <span className="text-muted-foreground">{t("จุดลงรถ")}</span>
               <span className="text-right font-medium">{ticket.dropOffPoint}</span>
             </div>
           </CardContent>
@@ -345,14 +355,14 @@ const TicketDetail = () => {
           <CardContent className="p-4 space-y-3">
             <h3 className="font-bold text-base flex items-center gap-2">
               <Bus className="h-4 w-4 text-primary" />
-              ข้อมูลรถ
+              {t("ข้อมูลรถ")}
             </h3>
             <div className="grid grid-cols-2 gap-y-2 text-sm">
-              <span className="text-muted-foreground">ประเภทรถ</span>
+              <span className="text-muted-foreground">{t("ประเภทรถ")}</span>
               <span className="text-right font-medium">{ticket.busType}</span>
-              <span className="text-muted-foreground">ทะเบียนรถ</span>
+              <span className="text-muted-foreground">{t("ทะเบียนรถ")}</span>
               <span className="text-right font-medium">{ticket.busPlate}</span>
-              <span className="text-muted-foreground">ที่นั่ง</span>
+              <span className="text-muted-foreground">{t("ที่นั่ง")}</span>
               <span className="text-right font-medium">
                 {ticket.seats.join(", ")}
               </span>
@@ -365,7 +375,7 @@ const TicketDetail = () => {
           <CardContent className="p-4 space-y-3">
             <h3 className="font-bold text-base flex items-center gap-2">
               <User className="h-4 w-4 text-primary" />
-              ผู้โดยสาร ({ticket.passengers.length} คน)
+              {t("ผู้โดยสาร")} {ticket.passengers.length} {t("คน")}
             </h3>
             <div className="space-y-3">
               {ticket.passengers.map((p, i) => (
@@ -373,7 +383,7 @@ const TicketDetail = () => {
                   <div className="flex items-center justify-between">
                     <span className="font-semibold text-sm">{p.fullName}</span>
                     <Badge variant="outline" className="text-xs">
-                      ที่นั่ง {p.seatNumber}
+                      {t("ที่นั่ง")} {p.seatNumber}
                     </Badge>
                   </div>
                   <div className="grid grid-cols-1 gap-1 text-xs text-muted-foreground">
@@ -401,36 +411,36 @@ const TicketDetail = () => {
           <CardContent className="p-4 space-y-3">
             <h3 className="font-bold text-base flex items-center gap-2">
               <CreditCard className="h-4 w-4 text-primary" />
-              ข้อมูลการจอง
+              {t("ข้อมูลการจอง")}
             </h3>
             <div className="grid grid-cols-2 gap-y-2 text-sm">
-              <span className="text-muted-foreground">วันที่จอง</span>
+              <span className="text-muted-foreground">{t("วันที่จอง")}</span>
               <span className="text-right font-medium">{ticket.bookingDate ? moment(ticket.bookingDate).format("DD MMM YYYY HH:mm") : "-"}</span>
-              <span className="text-muted-foreground">ช่องทางชำระ</span>
+              <span className="text-muted-foreground">{t("ช่องทางชำระ")}</span>
               <span className="text-right font-medium">{ticket.paymentMethod}</span>
-              <span className="text-muted-foreground">ราคา/ที่นั่ง</span>
+              <span className="text-muted-foreground">{t("ราคา/ที่นั่ง")}</span>
               <span className="text-right font-medium">฿{ticket.pricePerSeat.toLocaleString()}</span>
-              <span className="text-muted-foreground">จำนวนที่นั่ง</span>
+              <span className="text-muted-foreground">{t("จำนวนที่นั่ง")}</span>
               <span className="text-right font-medium">{ticket.seats.length}</span>
               {ticket.promoCode && (
                 <>
-                  <span className="text-muted-foreground">โค้ดส่วนลด</span>
+                  <span className="text-muted-foreground">{t("โค้ดส่วนลด")}</span>
                   <span className="text-right font-medium text-success">{ticket.promoCode}</span>
-                  <span className="text-muted-foreground">ส่วนลด</span>
+                  <span className="text-muted-foreground">{t("ส่วนลด")}</span>
                   <span className="text-right font-medium text-success">-฿{ticket.discount}</span>
                 </>
               )}
             </div>
             <Separator />
             <div className="flex justify-between font-bold text-lg">
-              <span>ยอดชำระ</span>
+              <span>{t("ยอดชำระ")}</span>
               <span className="text-primary">฿{ticket.total.toLocaleString()}</span>
             </div>
           </CardContent>
         </Card>
 
         {/* Actions */}
-        {(statusInfo.label === "กำลังจะถึง" || statusInfo.label === "เสร็จสิ้น") && ticket.paymentStatus === "paid" && (
+        {(statusInfo.label === t("กำลังจะถึง") || statusInfo.label === t("เสร็จสิ้น")) && ticket.paymentStatus === "paid" && (
           <div className="space-y-4 ">
             {/* <div className="space-y-2">
               <Button variant="outline" className="w-full h-11">
@@ -442,6 +452,14 @@ const TicketDetail = () => {
                 ส่งไปยังอีเมล
               </Button>
             </div> */}
+ 
+              <Button
+                onClick={handleTrackBus}
+                className="w-full h-14 bg-brand-gradient text-white font-bold text-lg shadow-lg"
+              >
+                <Navigation className="mr-2 h-6 w-6" />
+                {t("ดูตำแหน่งรถ")}
+              </Button> 
 
             <Button
               onClick={handleCheckin}
@@ -449,7 +467,7 @@ const TicketDetail = () => {
               className="w-full h-14 bg-primary hover:bg-primary-700 text-white font-bold text-lg shadow-lg"
             >
               <CheckIcon className="mr-2 h-6 w-6" />
-              {isCheckinLoading ? "กำลังดำเนินการ..." : "เช็คอิน"}
+              {isCheckinLoading ? t("กำลังดำเนินการ...") : t("เช็คอิน")}
             </Button>
           </div>
         )}
@@ -457,7 +475,7 @@ const TicketDetail = () => {
         <Link to="/my-tickets" >
           <Button variant="outline" className="w-full h-11 bg-grey-400 mt-4">
             <ArrowLeft className="mr-2 h-4 w-4" />
-            กลับหน้าตั๋วของฉัน
+            {t("กลับหน้าตั๋วของฉัน")}
           </Button>
         </Link>
         <div className="h-10"></div>

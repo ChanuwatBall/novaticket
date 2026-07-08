@@ -14,6 +14,7 @@ import { bookingList, createComplaint } from "@/services/api";
 import { toast } from "sonner";
 import moment from "moment";
 import { cn } from "@/lib/utils";
+import { t } from "i18next";
 
 type Ticket = {
   id: string;
@@ -134,7 +135,7 @@ const Complaints = () => {
   return (
     <BookingLayout
       showSteps={false}
-      title="แจ้งเรื่องร้องเรียน"
+      title={t("แจ้งเรื่องร้องเรียน")}
       navto={() => {
         if (step === 2 || step === 3) {
           setStep(1);
@@ -150,9 +151,9 @@ const Complaints = () => {
             <div className="bg-primary/5 p-4 rounded-xl border border-primary/10">
               <h2 className="text-sm font-bold flex items-center gap-2">
                 <AlertCircle className="h-4 w-4 text-primary" />
-                ขั้นตอนที่ 1: เลือกรายการจอง หรือ เรื่องทั่วไป
+                {t("ขั้นตอนที่ 1: เลือกรายการจอง หรือ เรื่องทั่วไป")}
               </h2>
-              <p className="text-xs text-muted-foreground mt-1">กรุณาเลือกลักษณะของปัญหาหรือข้อร้องเรียน</p>
+              <p className="text-xs text-muted-foreground mt-1">{t("กรุณาเลือกลักษณะของปัญหาหรือข้อร้องเรียน")}</p>
             </div>
 
             <div>
@@ -169,8 +170,8 @@ const Complaints = () => {
                     <MessageSquare className="h-5 w-5" />
                   </div>
                   <div className="flex-1">
-                    <h3 className="font-bold text-sm text-primary">ร้องเรียนเรื่องทั่วไป</h3>
-                    <p className="text-[11px] text-muted-foreground mt-0.5 leading-snug">สถานีจำหน่ายตั๋ว, พนักงาน, หรือรถโดยสารที่ไม่ได้ทำการจองบนระบบ</p>
+                    <h3 className="font-bold text-sm text-primary">{t("ร้องเรียนเรื่องทั่วไป")}</h3>
+                    <p className="text-[11px] text-muted-foreground mt-0.5 leading-snug">{t("สถานีจำหน่ายตั๋ว, พนักงาน, หรือรถโดยสารที่ไม่ได้ทำการจองบนระบบ")}</p>
                   </div>
                   <ChevronRight className="h-5 w-5 text-slate-400" />
                 </CardContent>
@@ -179,7 +180,7 @@ const Complaints = () => {
 
             <div className="flex items-center gap-4 py-1">
               <div className="h-px bg-slate-200 flex-1"></div>
-              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">หรือร้องเรียนจากรายการจอง</span>
+              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{t("หรือร้องเรียนจากรายการจอง")}</span>
               <div className="h-px bg-slate-200 flex-1"></div>
             </div>
 
@@ -192,8 +193,8 @@ const Complaints = () => {
                   <MapPin className="h-5 w-5" />
                 </div>
                 <div className="flex-1">
-                  <h3 className="font-bold text-sm text-primary">ร้องเรียนจากรายการจอง</h3>
-                  <p className="text-[11px] text-muted-foreground mt-0.5 leading-snug">แจ้งปัญหาการเดินทาง, สภาพรถ, หรือพนักงาน ในรอบที่ท่านเดินทาง</p>
+                  <h3 className="font-bold text-sm text-primary">{t("ร้องเรียนจากรายการจอง")}</h3>
+                  <p className="text-[11px] text-muted-foreground mt-0.5 leading-snug">{t("แจ้งปัญหาการเดินทาง, สภาพรถ, หรือพนักงาน ในรอบที่ท่านเดินทาง")}</p>
                 </div>
                 <ChevronRight className="h-5 w-5 text-slate-400" />
               </CardContent>
@@ -202,22 +203,22 @@ const Complaints = () => {
             <Dialog open={showTickets} onOpenChange={setShowTickets}>
               <DialogContent className="max-w-full w-full h-[100dvh] rounded-none flex flex-col gap-0 p-0 border-none shadow-none">
                 <DialogHeader className="p-5 pb-3 border-b bg-slate-50/50">
-                  <DialogTitle className="text-left font-bold text-lg">เลือกรายการจอง</DialogTitle>
+                  <DialogTitle className="text-left font-bold text-lg">{t("เลือกรายการจอง")}</DialogTitle>
                   <DialogDescription className="text-left text-xs">
-                    เลือกรายการจองที่ต้องการแจ้งปัญหา หรือข้อร้องเรียน
+                    {t("เลือกรายการจองที่ต้องการแจ้งปัญหา หรือข้อร้องเรียน")}
                   </DialogDescription>
                 </DialogHeader>
                 <div className="p-4 overflow-y-auto flex-1 h-full space-y-4">
                   {loading ? (
-                    <div className="py-20 text-center text-muted-foreground animate-pulse">กำลังโหลดข้อมูลการจอง...</div>
+                    <div className="py-20 text-center text-muted-foreground animate-pulse">{t("กำลังโหลดข้อมูลการจอง...")}</div>
                   ) : tickets.length === 0 ? (
                     <div className="py-20 text-center space-y-4">
                       <div className="bg-muted h-16 w-16 rounded-full flex items-center justify-center mx-auto text-muted-foreground">
                         <MessageSquare className="h-8 w-8" />
                       </div>
                       <div>
-                        <h3 className="font-bold">ไม่พบรายการจอง</h3>
-                        <p className="text-sm text-muted-foreground">ท่านต้องมีรายการจองที่สำเร็จแล้วจึงจะสามารถแจ้งร้องเรียนได้</p>
+                        <h3 className="font-bold">{t("ไม่พบรายการจอง")}</h3>
+                        <p className="text-sm text-muted-foreground">{t("ท่านต้องมีรายการจองที่สำเร็จแล้วจึงจะสามารถแจ้งร้องเรียนได้")}</p>
                       </div>
                     </div>
                   ) : (
@@ -237,7 +238,7 @@ const Complaints = () => {
                                 <p className="text-[10px] font-bold text-slate-400">#{ticket.bookingReference}</p>
                                 <div className="flex items-center gap-1.5 mt-1 font-bold text-sm">
                                   <MapPin className="h-3.5 w-3.5 text-primary" />
-                                  {ticket.origin} → {ticket.destination}
+                                  {t(ticket.origin)} → {t(ticket.destination)}
                                 </div>
                               </div>
                               <Badge variant="outline" className="text-[10px] uppercase font-bold">
@@ -249,7 +250,7 @@ const Complaints = () => {
                                 <Clock className="h-3 w-3" />
                                 {ticket.departureTime}
                               </span>
-                              <span>ที่นั่ง {ticket.seats.join(", ")}</span>
+                              <span>{t("ที่นั่ง")} {ticket.seats.join(", ")}</span>
                             </div>
                           </CardContent>
                         </Card>
@@ -267,7 +268,7 @@ const Complaints = () => {
                         setSelectedTicket(null);
                       }}
                     >
-                      ย้อนกลับ
+                      {t("ย้อนกลับ")}
                     </Button>
                     <Button
                       className="flex-1 h-12 font-bold shadow-lg"
@@ -278,7 +279,7 @@ const Complaints = () => {
                         setStep(2);
                       }}
                     >
-                      ถัดไป
+                      {t("ถัดไป")}
                     </Button>
                   </div>
                 </div>
@@ -292,43 +293,43 @@ const Complaints = () => {
             <div className="bg-primary/5 p-4 rounded-xl border border-primary/10">
               <h2 className="text-sm font-bold flex items-center gap-2">
                 <AlertCircle className="h-4 w-4 text-primary" />
-                ขั้นตอนที่ 2: รายละเอียดข้อร้องเรียน
+                {t("ขั้นตอนที่ 2: รายละเอียดข้อร้องเรียน")}
               </h2>
-              <p className="text-xs text-muted-foreground mt-1">กรุณาระบุรายละเอียดให้ชัดเจนเพื่อให้เจ้าหน้าที่ดำเนินการแก้ไข</p>
+              <p className="text-xs text-muted-foreground mt-1">{t("กรุณาระบุรายละเอียดให้ชัดเจนเพื่อให้เจ้าหน้าที่ดำเนินการแก้ไข")}</p>
             </div>
 
             {selectedTicket && (
               <Card className="bg-slate-50 border-primary/10 overflow-hidden">
                 <CardContent className="p-0">
                   <div className="bg-primary/10 px-3 py-2 flex justify-between items-center">
-                    <span className="text-[10px] font-black text-primary uppercase tracking-wider">Ticket Info</span>
+                    <span className="text-[10px] font-black text-primary uppercase tracking-wider">{t("Ticket Info")}</span>
                     <span className="text-[10px] font-bold text-primary/60">#{selectedTicket.bookingReference}</span>
                   </div>
                   <div className="p-4 space-y-3">
                     <div className="flex justify-between items-center">
                       <div>
-                        <p className="text-[10px] text-muted-foreground font-bold uppercase">Route</p>
-                        <p className="text-sm font-black">{selectedTicket.origin} → {selectedTicket.destination}</p>
+                        <p className="text-[10px] text-muted-foreground font-bold uppercase">{t("Route")}</p>
+                        <p className="text-sm font-black">{t(selectedTicket.origin)} → {t(selectedTicket.destination)}</p>
                       </div>
                       <div className="text-right">
-                        <p className="text-[10px] text-muted-foreground font-bold uppercase">Date</p>
+                        <p className="text-[10px] text-muted-foreground font-bold uppercase">{t("Date")}</p>
                         <p className="text-sm font-black">{moment(selectedTicket.date).format('D MMM YYYY')}</p>
                       </div>
                     </div>
 
                     <div className="grid grid-cols-2 gap-4 py-3 border-y border-dashed">
                       <div>
-                        <p className="text-[10px] text-muted-foreground font-bold uppercase">Time</p>
+                        <p className="text-[10px] text-muted-foreground font-bold uppercase">{t("Time")}</p>
                         <p className="text-xs font-bold">{selectedTicket.departureTime} - {selectedTicket.arrivalTime}</p>
                       </div>
                       <div className="text-right">
-                        <p className="text-[10px] text-muted-foreground font-bold uppercase">Seats</p>
+                        <p className="text-[10px] text-muted-foreground font-bold uppercase">{t("Seats")}</p>
                         <p className="text-xs font-bold text-primary">{selectedTicket.seats.join(", ")}</p>
                       </div>
                     </div>
 
                     <div className="flex justify-between items-center pt-1">
-                      <span className="text-xs font-bold text-muted-foreground">ยอดชำระ</span>
+                      <span className="text-xs font-bold text-muted-foreground">{t("ยอดชำระ")}</span>
                       <span className="text-sm font-black text-primary">฿{selectedTicket.total}</span>
                     </div>
                   </div>
@@ -340,11 +341,11 @@ const Complaints = () => {
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="busPlate" className="text-xs font-bold flex items-center gap-1.5">
-                    <Bus className="h-3 w-3" /> ทะเบียนรถ {isGeneralComplaint && <span className="text-slate-400 font-normal ml-1">(ถ้ามี)</span>}
+                    <Bus className="h-3 w-3" /> {t("ทะเบียนรถ")} {isGeneralComplaint && <span className="text-slate-400 font-normal ml-1">({t("ถ้ามี")})</span>}
                   </Label>
                   <Select value={busPlate} onValueChange={setBusPlate}>
                     <SelectTrigger className="h-10 text-sm">
-                      <SelectValue placeholder="เลือกทะเบียนรถ" />
+                      <SelectValue placeholder={t("เลือกทะเบียนรถ")} />
                     </SelectTrigger>
                     <SelectContent className="max-h-[200px]">
                       {busPlateOptions.map((plate) => (
@@ -357,12 +358,12 @@ const Complaints = () => {
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="phoneNumber" className="text-xs font-bold flex items-center gap-1.5">
-                    <Clock className="h-3 w-3" /> เบอร์โทรศัพท์
+                    <Clock className="h-3 w-3" /> {t("เบอร์โทรศัพท์")}
                   </Label>
                   <Input
                     id="phoneNumber"
                     type="tel"
-                    placeholder="เบอร์โทรติดต่อ"
+                    placeholder={t("เบอร์โทรติดต่อ")}
                     value={phoneNumber}
                     onChange={(e) => setPhoneNumber(e.target.value.replace(/\D/g, "").slice(0, 10))}
                     maxLength={10}
@@ -372,10 +373,10 @@ const Complaints = () => {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="complaint" className="font-bold text-sm">รายละเอียดเรื่องร้องเรียน</Label>
+                <Label htmlFor="complaint" className="font-bold text-sm">{t("รายละเอียดเรื่องร้องเรียน")}</Label>
                 <Textarea
                   id="complaint"
-                  placeholder="เช่น บริการพนักงานขับรถ, สภาพรถ, ความล่าช้า ฯลฯ"
+                  placeholder={t("เช่น บริการพนักงานขับรถ, สภาพรถ, ความล่าช้า ฯลฯ")}
                   className="min-h-[150px] resize-none focus:ring-primary shadow-sm"
                   value={complaintText}
                   onChange={(e) => setComplaintText(e.target.value)}
@@ -389,13 +390,13 @@ const Complaints = () => {
               <Button variant="outline" className="flex-1 h-12" onClick={() => {
                 setStep(1);
                 setIsGeneralComplaint(false);
-              }}>ย้อนกลับ</Button>
+              }}>{t("ย้อนกลับ")}</Button>
               <Button
                 className="flex-1 h-12 shadow-lg"
                 onClick={handleSubmit}
                 disabled={submitting}
               >
-                {submitting ? "กำลังส่ง..." : "ส่งข้อร้องเรียน"}
+                {submitting ? t("กำลังส่ง...") : t("ส่งข้อร้องเรียน")}
               </Button>
             </div>
           </div>
@@ -413,9 +414,9 @@ const Complaints = () => {
             </div>
 
             <div className="space-y-2">
-              <h2 className="text-2xl font-bold">ส่งเรื่องเรียบร้อยแล้ว</h2>
+              <h2 className="text-2xl font-bold">{t("ส่งเรื่องเรียบร้อยแล้ว")}</h2>
               <p className="text-sm text-muted-foreground px-8">
-                เราได้รับข้อร้องเรียนของท่านแล้ว เจ้าหน้าที่จะดำเนินการตรวจสอบและติดต่อกลับภายใน 24-48 ชั่วโมง
+                {t("เราได้รับข้อร้องเรียนของท่านแล้ว เจ้าหน้าที่จะดำเนินการตรวจสอบและติดต่อกลับภายใน 24-48 ชั่วโมง")}
               </p>
             </div>
 
@@ -434,7 +435,7 @@ const Complaints = () => {
                   setIsGeneralComplaint(false);
                 }}
               >
-                กลับไปที่หน้าโปรไฟล์
+                {t("กลับไปที่หน้าโปรไฟล์")}
               </Button>
             </div>
           </div>

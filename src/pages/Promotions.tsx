@@ -10,6 +10,7 @@ import { Tag, Clock, Copy, CheckCircle, Coins, Route } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import { toast } from "sonner";
 import { getPromotions } from "@/services/api";
+import { t } from "i18next";
 
 const PromotionsPage = () => {
   const [promotions, setPromotions] = useState<any[]>([]);
@@ -43,17 +44,17 @@ const PromotionsPage = () => {
       ];
 
       const apiPromos = (promotionsData || []).map((p: any) => ({...p, type: p.type || 'discount'}));
-      setPromotions([...mockedPromotions, ...apiPromos]);
+      setPromotions(apiPromos);
     }
     conf()
   }, [])
   return (
-    <BookingLayout showSteps={false} title="โปรโมชั่น" navto={() => navigate(-1)}>
+    <BookingLayout showSteps={false} title={t("โปรโมชั่น")} navto={() => navigate(-1)}>
       <div className="px-4">
         <Tabs defaultValue="all">
           <TabsList className="w-full mb-4">
-            <TabsTrigger value="all" className="flex-1">ทั้งหมด</TabsTrigger>
-            <TabsTrigger value="member" className="flex-1">สมาชิก</TabsTrigger>
+            <TabsTrigger value="all" className="flex-1">{t("ทั้งหมด")}</TabsTrigger>
+            <TabsTrigger value="member" className="flex-1">{t("สมาชิก")}</TabsTrigger>
           </TabsList>
 
           {["all", "member"].map((tab) => (
@@ -117,16 +118,16 @@ const PromotionsPage = () => {
                                 </div>
                                 <div className="bg-amber-500 text-white text-[10px] font-bold px-2.5 py-1.5 rounded flex items-center gap-1 shadow-sm">
                                   <Tag className="h-3 w-3" />
-                                  แลกคูปอง
+                                  {t("แลกคูปอง")}
                                 </div>
                               </div>
                             )}
 
                             <div className="flex items-center justify-between text-[10px] font-bold text-slate-400 pt-2 border-t border-dashed">
                               <span className="flex items-center gap-1.5">
-                                <Clock className="h-3 w-3" /> หมดอายุ {promo.expiryDate}
+                                <Clock className="h-3 w-3" /> {t("หมดอายุ")} {promo.expiryDate}
                               </span>
-                              <span>เหลือ {promo.remainingQuota} สิทธิ์</span>
+                              <span>{t("เหลือ")} {promo.remainingQuota} {t("สิทธิ์")}</span>
                             </div>
                           </div>
                         </CardContent>
