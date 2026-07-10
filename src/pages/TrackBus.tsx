@@ -272,7 +272,8 @@ const TrackBus = () => {
       try {
         const bookings = await bookingList(1, 100);
         const upcomingTickets = bookings?.data?.filter(
-          (ticket: TrackingTicket) => getTicketStatus(ticket).key === "upcoming" && ticket.paymentStatus === "paid",
+          (ticket: TrackingTicket) => 
+            (getTicketStatus(ticket).key === "upcoming" || getTicketStatus(ticket).key === "confirmed") && (moment().isBefore(moment(ticket.date+" "+ticket.departureTime))) && ticket.paymentStatus === "paid",
         ) || [];
         setTickets(upcomingTickets);
 

@@ -291,7 +291,7 @@ const Home = () => {
 
           try {
             const bookings = await bookingList(1, 100)
-            const upcomingTickets = bookings?.data?.filter((ticket) => getTicketStatus(ticket).key === "upcoming" && ticket.paymentStatus === "paid")
+            const upcomingTickets = bookings?.data?.filter((ticket) => (getTicketStatus(ticket).key === "upcoming" || getTicketStatus(ticket).key === "confirmed") && (moment().isBefore(moment(ticket.date+" "+ticket.departureTime))) && ticket.paymentStatus === "paid")
             if (upcomingTickets.length > 0) {
               console.log("Founded upcoming tickets: ")
 
