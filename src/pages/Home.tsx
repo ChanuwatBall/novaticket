@@ -17,7 +17,7 @@ import "../css/Home.css";
 import { mockPromotions } from "@/data/mockData";
 // import { getRoutes, getPromotions, Province } from "@/services/api";
 import { useQuery } from "@tanstack/react-query";
-import { loginWithLine, getUserMe, getPromotions, getProvinces, getRoutes, getBusStops, getFaqs, bookingList, updatePassengerLocation, bookingDetail } from "@/services/api";
+import { loginWithLine, getUserMe, getPromotions, getProvinces, getRoutes, getBusStops, getFaqs, bookingList, updatePassengerLocation, bookingDetail, getBoardingPoints } from "@/services/api";
 import liff from "@line/liff";
 import moment from "moment";
 import { statusConfig } from "./MyTickets";
@@ -155,11 +155,22 @@ const Home = () => {
 
   useEffect(() => {
     const fetchBusStopsForRoute = async () => {
+      // if(store.originProvinceId ){
+      //  const boardingPoints = await getBoardingPoints(store.originProvinceId?.id);
+      //  console.log("boardingPoints originProvince:  ", boardingPoints);
+      // }
+      //  if(store.destinationProvinceId ){
+      //  const boardingPoints = await getBoardingPoints(store.destinationProvinceId?.id);
+      //  console.log("boardingPoints destinationProvince:  ", boardingPoints);
+      // }
+       console.log("store.originProvinceId   ", store.originProvinceId );
+       console.log("store.destinationProvinceId   ", store.destinationProvinceId );
       if (store.originProvinceId && store.destinationProvinceId) {
-        const matchedRouteId = store.originProvinceId.routeIds?.find((routeId: string) =>
-          store.destinationProvinceId?.routeIds?.includes(routeId)
+        const matchedRouteId = 
+        store.originProvinceId.routeIds?.find((routeId: string) =>
+          store.destinationProvinceId?.routeIds?.includes(routeId) 
         );
-
+        console.log("matchedRouteId ", matchedRouteId)
         if (matchedRouteId) {
           try {
             const data = await getBusStops(matchedRouteId, {
@@ -291,11 +302,12 @@ const Home = () => {
 
           try {
             const bookings = await bookingList(1, 100)
-            const upcomingTickets = bookings?.data?.filter((ticket) => (getTicketStatus(ticket).key === "upcoming" || getTicketStatus(ticket).key === "confirmed") && (moment().isBefore(moment(ticket.date+" "+ticket.departureTime))) && ticket.paymentStatus === "paid")
-            if (upcomingTickets.length > 0) {
-              console.log("Founded upcoming tickets: ")
+            const currentTicket = bookings?.data?.filter((ticket) => (getTicketStatus(ticket).key === "upcoming" || getTicketStatus(ticket).key === "confirmed") && (moment().isBefore(moment(`${ticket.date} ${ticket.arrivalTime}`, "YYYY-MM-DD HH:mm"))) && (ticket.paymentStatus === "paid"  ))
+            
+              console.log("Founded current tickets: ",currentTicket)
+            if (currentTicket.length > 0) {
 
-              await upcomingTickets.forEach(async (ticket) => {
+              await currentTicket.forEach(async (ticket) => {
                 console.log("upcoming ticket: ", ticket?.id);
                 const bookDe: any = await bookingDetail({ id: ticket?.id })
                 console.log("Updating location for booking: ", bookDe);

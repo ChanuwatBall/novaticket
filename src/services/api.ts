@@ -595,7 +595,20 @@ export const getFaqs = async (category?: string) => {
       return getErrorData(err)
     })
 }
-
+// curl /api/boarding-points
+export const getBoardingPoints = async (provinceId?: string) => {
+  return await api.get(`/api/boarding-points`, {
+    params: provinceId ? { provinceId } : {}
+  })
+    .then((res) => {
+      console.log("getBoardingPoints res ", res)
+      return res.data
+    })
+    .catch((err) => {
+      console.log("getBoardingPoints err ", err)
+      return getErrorData(err)
+    })
+}
 export const getBusStops = async (routeId: string, routeMeta?: { originProvinceId?: string; destinationProvinceId?: string; origin?: string; destination?: string }) => {
   return await api.get(`/api/bus-stops`, {
     params: { routeId }

@@ -271,13 +271,14 @@ const TrackBus = () => {
       setLoadingTickets(true);
       try {
         const bookings = await bookingList(1, 100);
-        const upcomingTickets = bookings?.data?.filter(
+        const currentTicket = bookings?.data?.filter(
           (ticket: TrackingTicket) => 
-            (getTicketStatus(ticket).key === "upcoming" || getTicketStatus(ticket).key === "confirmed") && (moment().isBefore(moment(ticket.date+" "+ticket.departureTime))) && ticket.paymentStatus === "paid",
+            (getTicketStatus(ticket).key === "upcoming" || getTicketStatus(ticket).key === "confirmed") && (moment().isBefore(moment(`${ticket.date} ${ticket.arrivalTime}`, "YYYY-MM-DD HH:mm"))) && (ticket.paymentStatus === "paid"  ),
         ) || [];
-        setTickets(upcomingTickets);
+        console.log("currentTicket ", currentTicket);
+        setTickets(currentTicket);
 
-        const matchedTicket = upcomingTickets.find((ticket: TrackingTicket) => {
+        const matchedTicket = currentTicket.find((ticket: TrackingTicket) => {
           return (
             (bookingReferenceParam && ticket.bookingReference === bookingReferenceParam) ||
             (tripIdParam && ticket.tripId === tripIdParam)
