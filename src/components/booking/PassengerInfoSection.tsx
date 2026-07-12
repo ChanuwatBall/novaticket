@@ -35,8 +35,24 @@ const PassengerInfoSection = ({ onContinue }: PassengerInfoSectionProps) => {
   const tripPrice = store.selectedTrip?.price ?? 0;
 
   const [passengers, setPassengers] = useState<PassengerInfo[]>(() => {
-    return store.selectedSeats.map((seat) => {
+    const user = localStorage.getItem("user");
+    const userData = user ? JSON.parse(user) : null;
+    
+    return store.selectedSeats.map((seat, index) => {
       const existing = store.passengers.find(p => p.seatId === seat.id);
+      
+      // Auto-fill ผู้โดยสารคนแรกด้วยข้อมูลโปรไฟล์
+      if (index === 0 && !existing && userData?.user) {
+        return {
+          seatId: seat.id,
+          seatNumber: seat.number,
+          fullName: userData.user.fullName || userData.user.name || "",
+          thaiId: "",
+          phone: userData.user.phone || "",
+          passengerType: "male",
+        };
+      }
+      
       return existing || {
         seatId: seat.id,
         seatNumber: seat.number,
@@ -79,7 +95,7 @@ const PassengerInfoSection = ({ onContinue }: PassengerInfoSectionProps) => {
     if (user) { 
       const userData = JSON.parse(user);
       console.log("User data from localStorage:", userData);
-      // Do something with the retrieved user data
+
       getPromotionsTrip({ 
         routeId: store.selectedTrip?.id, 
         phone: userData?.user?.phone,
@@ -110,10 +126,26 @@ const PassengerInfoSection = ({ onContinue }: PassengerInfoSectionProps) => {
 
   useEffect(() => {
     setPassengers((prev) => {
+      const user = localStorage.getItem("user");
+      const userData = user ? JSON.parse(user) : null;
       const existingMap = new Map(prev.map(p => [p.seatId, p]));
-      return store.selectedSeats.map((seat) => {
+      
+      return store.selectedSeats.map((seat, index) => {
         if (existingMap.has(seat.id)) return existingMap.get(seat.id)!;
         const inStore = store.passengers.find(p => p.seatId === seat.id);
+        
+        // Auto-fill ผู้โดยสารคนแรกด้วยข้อมูลโปรไฟล์
+        if (index === 0 && !inStore && userData?.user) {
+          return {
+            seatId: seat.id,
+            seatNumber: seat.number,
+            fullName: userData.user.fullName || userData.user.name || "",
+            thaiId: "",
+            phone: userData.user.phone || "",
+            passengerType: "male",
+          };
+        }
+        
         return inStore || { seatId: seat.id, seatNumber: seat.number, fullName: "", thaiId: "", phone: "", passengerType: "male" };
       });
     });

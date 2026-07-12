@@ -9,6 +9,12 @@ export default defineConfig(({ mode }) => ({
   define: {
     global: 'window',
   },
+  optimizeDeps: {
+    exclude: [
+      "@capacitor-community/camera-preview",
+      "@capacitor-community/image-to-text",
+    ],
+  },
   server: {
     allowedHosts: true,
     host: "::",

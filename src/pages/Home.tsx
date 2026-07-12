@@ -1,12 +1,12 @@
 import { Link, useNavigate } from "react-router-dom";
-import { Users, CalendarIcon, MapPin, Tag, Ticket, UserCircle, Check } from "lucide-react";
+import { Users, CalendarIcon, MapPin, Tag, Ticket, UserCircle, Check, ArrowUpDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import { Swiper, SwiperSlide } from 'swiper/react';
 import 'swiper/swiper-bundle.css';
 // import { mockPromotions, provinces, routes } from "@/data/mockData";
 import { format } from "date-fns";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useRef } from "react";
 import { useBookingStore } from "@/store/bookingStore";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { th } from "date-fns/locale";
@@ -22,6 +22,7 @@ import liff from "@line/liff";
 import moment from "moment";
 import { statusConfig } from "./MyTickets";
 import { t } from "i18next";
+import { supabase } from "@/supabase/client";
 
 const Home = () => {
   const store = useBookingStore();
@@ -41,6 +42,7 @@ const Home = () => {
   const [userMe, setUserMe] = useState<any>(null);
   const [busStops, setBusStops] = useState<any[]>([]);
   const [maxPassenger, setMaxPassenger] = useState(3);
+  const [introducRoute, setIntroduceRoute] = useState<any[]>([]);
   // API Queries
 
   // const { data: promotions = [], isLoading: isLoadingPromotions } = useQuery({
@@ -75,15 +77,33 @@ const Home = () => {
     navigate("/booking");
   };
 
+  const handleSwapOriginDestination = () => {
+    if (!store.originProvinceId || !store.destinationProvinceId) {
+      return;
+    }
+
+    const nextOrigin = store.destinationProvinceId;
+    const nextDestination = store.originProvinceId;
+
+    store.setOriginProvince(nextOrigin);
+    store.setDestinationProvince(nextDestination);
+    store.setBoardingPoint(null);
+    store.setDropOffPoint(null);
+    setStartpoint(nextOrigin?.name ?? "");
+    setDestination(nextDestination?.name ?? "");
+    setOpenOrigin(false);
+    setOpenDestination(false);
+  };
+
   useEffect(() => {
-    
+
     const fetchUser = async () => {
       try {
         const preferencesstr = localStorage.getItem("preferences");
         const preferences = preferencesstr ? JSON.parse(preferencesstr) : null;
         console.log("preferences ", preferences)
         setMaxPassenger(preferences?.booking?.maxPassenger || 3);
-      } catch (error) {}
+      } catch (error) { }
       try {
         const userme = await getUserMe();
         if (userme?.error === 'Unauthorized') {
@@ -111,11 +131,12 @@ const Home = () => {
       } catch (e) {
         console.error("Home user check failed", e);
       }
+
     };
 
     const conf = async () => {
       try {
-        const data = await getRoutes()
+        const data: any = await getRoutes()
         console.log("routes_group ", data)
         setRoutesGroup(data)
       } catch (error) {
@@ -151,25 +172,42 @@ const Home = () => {
     fetchUser();
     conf();
     checkTicketStatus();
+    getRoutes();
+
+    // Cleanup function
+    return () => {
+      if (watchIdRef.current !== null) {
+        window.navigator.geolocation.clearWatch(watchIdRef.current);
+        watchIdRef.current = null;
+      }
+    };
+  }, [])
+
+  useEffect(() => {
+    const today = moment().startOf("day").toDate();
+    setDate(today);
+    store.setPassengerCount(1);
   }, [])
 
   useEffect(() => {
     const fetchBusStopsForRoute = async () => {
-      // if(store.originProvinceId ){
-      //  const boardingPoints = await getBoardingPoints(store.originProvinceId?.id);
-      //  console.log("boardingPoints originProvince:  ", boardingPoints);
-      // }
-      //  if(store.destinationProvinceId ){
-      //  const boardingPoints = await getBoardingPoints(store.destinationProvinceId?.id);
-      //  console.log("boardingPoints destinationProvince:  ", boardingPoints);
-      // }
-       console.log("store.originProvinceId   ", store.originProvinceId );
-       console.log("store.destinationProvinceId   ", store.destinationProvinceId );
+      console.log("store.originProvinceId   ", store.originProvinceId);
+      console.log("store.destinationProvinceId   ", store.destinationProvinceId);
       if (store.originProvinceId && store.destinationProvinceId) {
-        const matchedRouteId = 
-        store.originProvinceId.routeIds?.find((routeId: string) =>
-          store.destinationProvinceId?.routeIds?.includes(routeId) 
-        );
+        const matchedRouteId = await supabase
+          .from('routes')
+          .select('id')
+          .eq('origin_id', store.originProvinceId.id)
+          .eq('destination_id', store.destinationProvinceId.id)
+          .single()
+          .then((response) => {
+            if (response.error) {
+              console.error("Error fetching matched route ID:", response.error);
+              return null;
+            }
+            return response.data?.id || null;
+          });
+
         console.log("matchedRouteId ", matchedRouteId)
         if (matchedRouteId) {
           try {
@@ -191,6 +229,15 @@ const Home = () => {
 
     fetchBusStopsForRoute();
   }, [store.originProvinceId, store.destinationProvinceId]);
+
+  const getRoutes = async () => {
+    const { data: routes, error } = await supabase.from('routes').select('*')
+    if (error) {
+      console.error("Error fetching routes:", error);
+      return;
+    }
+    setIntroduceRoute(routes);
+  }
 
 
 
@@ -258,6 +305,10 @@ const Home = () => {
     store.setDestinationProvince(null)
   }
 
+  const lastUpdateRef = useRef<number>(0);
+  const watchIdRef = useRef<number | null>(null);
+  const UPDATE_INTERVAL = 30000; // อัพเดททุก 30 วินาที
+
   const getTicketStatus = (ticket: any) => {
     let key = 'confirmed';
     if (ticket.status === "cancelled") key = "cancelled";
@@ -288,10 +339,98 @@ const Home = () => {
     store?.setDestinationProvince(ep);
   }
 
+  const autoHandleBooking = async (route: any) => {
+    const today = moment().startOf("day").toDate();
+    setDate(today);
+    store.setPassengerCount(1);
+
+    const originProvince = provinces.find(
+      (p) => String(p.id) === String(route.origin_id ?? route.origin)
+        || p.name === route.origin
+        || p.nameEn === route.origin
+        || p.name_en === route.origin
+    );
+    const destinationProvince = provinces.find(
+      (p) => String(p.id) === String(route.destination_id ?? route.destination)
+        || p.name === route.destination
+        || p.nameEn === route.destination
+        || p.name_en === route.destination
+    );
+
+    if (!originProvince || !destinationProvince) {
+      alert("ไม่พบข้อมูลต้นทางหรือปลายทาง");
+      return;
+    }
+
+    store.setRoute(`${originProvince.name} - ${destinationProvince.name}`);
+    store.setOriginProvince(originProvince);
+    store.setDestinationProvince(destinationProvince);
+    setStartpoint(originProvince.name);
+    setDestination(destinationProvince.name);
+
+    try {
+      const matchedRouteId = route.id
+        || await supabase
+          .from('routes')
+          .select('id')
+          .eq('origin_id', originProvince.id)
+          .eq('destination_id', destinationProvince.id)
+          .single()
+          .then((response) => {
+            if (response.error) {
+              return null;
+            }
+            return response.data?.id || null;
+          });
+
+      if (!matchedRouteId) {
+        alert("ไม่พบเส้นทางสำหรับการจอง");
+        return;
+      }
+
+      const stops = await getBusStops(matchedRouteId, {
+        originProvinceId: originProvince.id,
+        destinationProvinceId: destinationProvince.id,
+        origin: originProvince.name,
+        destination: destinationProvince.name,
+      });
+
+      const originStops = (stops || []).filter(
+        (r: any) => r.route_id?.origin_id === originProvince.id && (r.type === "pickup" || r.type === "stop")
+      );
+      const destinationStops = (stops || []).filter(
+        (r: any) => r.route_id?.destination_id === destinationProvince.id && (r.type === "dropoff" || r.type === "stop")
+      );
+
+      const firstBoardingPoint = originStops[0];
+      const lastDropOffPoint = destinationStops[destinationStops.length - 1];
+
+      if (!firstBoardingPoint || !lastDropOffPoint) {
+        alert("ไม่พบจุดขึ้นหรือจุดลงรถสำหรับเส้นทางนี้");
+        return;
+      }
+
+      setBusStops(stops || []);
+      store.setBoardingPoint(firstBoardingPoint);
+      store.setDropOffPoint(lastDropOffPoint);
+      store.setTravelDate(format(today, "yyyy-MM-dd"));
+      navigate("/booking");
+    } catch (error) {
+      console.error("auto handle booking error", error);
+      alert("เกิดข้อผิดพลาดในการจองอัตโนมัติ");
+    }
+  }
+
   const checkTicketStatus = async () => {
     console.log("start checking TicketStatus ....")
+    
+    // ล้าง watch เก่าถ้ามี
+    if (watchIdRef.current !== null) {
+      window.navigator.geolocation.clearWatch(watchIdRef.current);
+    }
+
     let userLocation: any = {}
-    window.navigator.geolocation.watchPosition(
+    watchIdRef.current = window.navigator.geolocation.watchPosition(
       async (position) => {
         if (position.coords) {
           userLocation = {
@@ -300,19 +439,29 @@ const Home = () => {
             accuracy_m: position.coords.accuracy
           };
 
-          try {
-            const bookings = await bookingList(1, 100)
-            const currentTicket = bookings?.data?.filter((ticket) => (getTicketStatus(ticket).key === "upcoming" || getTicketStatus(ticket).key === "confirmed") && (moment().isBefore(moment(`${ticket.date} ${ticket.arrivalTime}`, "YYYY-MM-DD HH:mm"))) && (ticket.paymentStatus === "paid"  ))
-            
-              console.log("Founded current tickets: ",currentTicket)
-            if (currentTicket.length > 0) {
+          // จำกัดความถี่ในการอัพเดท (throttle)
+          const now = Date.now();
+          if (now - lastUpdateRef.current < UPDATE_INTERVAL) {
+            console.log("Skipping update - too soon since last update");
+            return;
+          }
+          lastUpdateRef.current = now;
 
-              await currentTicket.forEach(async (ticket) => {
+          try {
+            const bookings = await supabase.from('bookings').select('*')
+            .eq('user_id', userMe?.id).in('status', ['confirmed', 'upcoming']).in('paymentStatus', ['paid']);
+            // await bookingList(1, 100)
+            const currentTicket = bookings?.data?.filter((ticket) => (getTicketStatus(ticket).key === "upcoming" || getTicketStatus(ticket).key === "confirmed") && (moment().isBefore(moment(`${ticket.date} ${ticket.arrivalTime}`, "YYYY-MM-DD HH:mm"))) && (ticket.paymentStatus === "paid"))
+
+            console.log("Founded current tickets: ", currentTicket)
+            if (currentTicket.length > 0) {
+              // ใช้ Promise.all แทน forEach เพื่อรอให้ async operations เสร็จ
+              await Promise.all(currentTicket.map(async (ticket) => {
                 console.log("upcoming ticket: ", ticket?.id);
                 const bookDe: any = await bookingDetail({ id: ticket?.id })
                 console.log("Updating location for booking: ", bookDe);
-                updatePassengerLocation(bookDe?.tripId, userLocation);
-              });
+                await updatePassengerLocation(bookDe?.tripId, userLocation);
+              }));
             } else {
               console.log("No upcoming tickets found, skipping location update");
             }
@@ -321,6 +470,14 @@ const Home = () => {
           }
 
         }
+      },
+      (error) => {
+        console.error("Geolocation error: ", error);
+      },
+      {
+        enableHighAccuracy: false, // ลดความแม่นยำเพื่อประหยัด battery
+        maximumAge: 10000, // ยอมรับตำแหน่งที่เก็บไว้ได้ถึง 10 วินาที
+        timeout: 5000
       }
     )
   }
@@ -344,90 +501,100 @@ const Home = () => {
         <div className="p-4 space-y-6 max-w-lg mx-auto w-full absolute " style={{ width: "100%", minHeight: "7rem", zIndex: 51, marginTop: "-10vh" }} >
           <div className="bg-white rounded-2xl p-3 mb-4  text-lg drop-shadow-xl " >
             <div className="grid  " >
-              <div className="scrollbar flex-shrink-0 flex " style={{ width: "100%", overflowX: "scroll" }}>
-                {/* {routesGroup.map((r) => (
-                  <button key={r.id} onClick={() => {
-                    chooseGroup(r)
-                  }}>
-                    <span className={cn("block text-center py-2 px-4 rounded-lg font-medium transition-colors whitespace-nowrap mr-1", store?.routeGroupid === r.g_route_id ? "bg-primary text-primary-foreground" : "bg-accent text-accent-foreground hover:bg-accent/80")}>
-                      {r.name}
-                    </span>
-                  </button>
-                ))} */}
+
+              <div className="grid grid-cols-6">
+
+                <div className="col-span-5" >
+                  <div className="relative" style={{ position: "relative" }} >
+                    <div className="space-y-1.5 mt-3">
+                      <label className="text-sm font-medium text-muted-foreground ">
+                        {t("ต้นทาง")}
+                      </label>
+                      <div className={cn("w-full h-12 justify-start font-normal relative flex items-center gap-1")}>
+                        <MapPin className="h-3.5 w-3.5  text-muted-foreground" />
+                        <input
+                          type="text"
+                          value={store?.originProvinceId ? t(`${store.originProvinceId?.name}`) || "" : ""}
+                          placeholder={t("เลือกต้นทาง")}
+                          onFocus={() => setOpenOrigin(true)}
+                          onChange={(e) => setStartpoint(e.target.value)}
+                          onBlur={() => setTimeout(() => setOpenOrigin(false), 150)}
+                          className="w-full h-12   border-b border-input bg-card focus:outline-none focus:ring-2 focus:ring-ring font-medium text-muted-foreground cursor-pointer px-3 py-2"
+                        />
+                        {openOrigin && <div className="absolute inset-0 bg-white  mt-14" style={{ zIndex: "9999" }} onClick={() => setOpenOrigin(false)}>
+                          <ul className="max-h-60 overflow-y-auto  bg-white border border-input rounded-lg p-2" onClick={(e) => e.stopPropagation()}>
+                            {filteredProvinces.map((p) => (
+                              <li
+                                key={p.id}
+                                className="cursor-pointer hover:bg-accent px-2 py-1 border-b border-gray-100"
+                                onClick={() => {
+                                  setStartpoint(p.origin);
+                                  setOpenOrigin(false);
+                                  store.setOriginProvince(p);
+                                }}
+                              >
+                                {p.name} <br /><sub>{p?.nameEn}</sub>
+                              </li>
+                            ))}
+                          </ul>
+                        </div>}
+                      </div>
+                    </div>
+
+                    <div className="space-y-1.5 mt-3">
+                      <label className="text-sm font-medium text-muted-foreground  gap-1">
+                        {t("ปลายทาง")}
+                      </label>
+                      <div className={cn("w-full h-12 justify-start font-normal relative flex items-center gap-1")}>
+                        <MapPin className="h-3.5 w-3.5  text-muted-foreground" />
+                        <input
+                          type="text"
+                          value={store?.destinationProvinceId ? t(`${store?.destinationProvinceId?.name}`) || "" : ""}
+                          placeholder={t("เลือกปลายทาง")}
+                          onFocus={() => setOpenDestination(true)}
+                          onChange={(e) => { setDestination(e.target.value) }}
+                          onBlur={() => setTimeout(() => setOpenDestination(false), 150)}
+                          className="w-full h-12   border-b border-input bg-card focus:outline-none focus:ring-2 focus:ring-ring font-medium text-muted-foreground cursor-pointer px-3 py-2"
+                        />
+                        {openDestination && <div className="absolute inset-0 bg-white  mt-14" style={{ zIndex: "9999" }} onClick={() => setOpenDestination(false)}>
+                          <ul className="max-h-60 overflow-y-auto  bg-white border border-input rounded-lg p-2" onClick={(e) => e.stopPropagation()}>
+                            {filteredProvinceByDestination.map((p) => (
+                              <li
+                                key={p.id}
+                                className="cursor-pointer hover:bg-accent px-2 py-1 border-b border-gray-100"
+                                onClick={() => {
+                                  setDestination(p);
+                                  setOpenDestination(false);
+                                  store.setDestinationProvince(p);
+                                }}
+                              >
+                                {p.name} <br /><sub>{p?.nameEn}</sub>
+                              </li>
+                            ))}
+                          </ul>
+                        </div>}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="col-span-1 flex items-center justify-center">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="icon"
+                    onClick={handleSwapOriginDestination}
+                    disabled={!store.originProvinceId || !store.destinationProvinceId}
+                    aria-label={t("สลับต้นทางปลายทาง")}
+                    title={t("สลับต้นทางปลายทาง")}
+                  >
+                    <ArrowUpDown className="h-4 w-4" />
+                  </Button>
+                </div>
+
               </div>
+
               <div>
-
-
-                <div className="space-y-1.5 mt-3">
-                  <label className="text-sm font-medium text-muted-foreground ">
-                    {t("ต้นทาง")}
-                  </label>
-                  <div className={cn("w-full h-12 justify-start font-normal relative flex items-center gap-1")}>
-                    <MapPin className="h-3.5 w-3.5  text-muted-foreground" />
-                    <input
-                      type="text"
-                      value={store?.originProvinceId ? t(`${store.originProvinceId?.name}`) || "" : ""}
-                      placeholder={t("เลือกต้นทาง")}
-                      onFocus={() => setOpenOrigin(true)}
-                      onChange={(e) => setStartpoint(e.target.value)}
-                      onBlur={() => setTimeout(() => setOpenOrigin(false), 150)}
-                      className="w-full h-12   border-b border-input bg-card focus:outline-none focus:ring-2 focus:ring-ring font-medium text-muted-foreground cursor-pointer px-3 py-2"
-                    />
-                    {openOrigin && <div className="absolute inset-0 bg-white  mt-14" style={{ zIndex: "9999" }} onClick={() => setOpenOrigin(false)}>
-                      <ul className="max-h-60 overflow-y-auto  bg-white border border-input rounded-lg p-2" onClick={(e) => e.stopPropagation()}>
-                        {filteredProvinces.map((p) => (
-                          <li
-                            key={p.id}
-                            className="cursor-pointer hover:bg-accent px-2 py-1 border-b border-gray-100"
-                            onClick={() => {
-                              setStartpoint(p.origin);
-                              setOpenOrigin(false);
-                              store.setOriginProvince(p);
-                            }}
-                          >
-                            {p.name} <br/><sub>{p?.nameEn}</sub>
-                          </li>
-                        ))}
-                      </ul>
-                    </div>}
-                  </div>
-                </div>
-
-                <div className="space-y-1.5 mt-3">
-                  <label className="text-sm font-medium text-muted-foreground  gap-1">
-                    {t("ปลายทาง")}
-                  </label>
-                  <div className={cn("w-full h-12 justify-start font-normal relative flex items-center gap-1")}>
-                    <MapPin className="h-3.5 w-3.5  text-muted-foreground" />
-                    <input
-                      type="text"
-                      value={store?.destinationProvinceId ? t(`${store?.destinationProvinceId?.name}`) || "" : ""}
-                      placeholder={t("เลือกปลายทาง")}
-                      onFocus={() => setOpenDestination(true)}
-                      onChange={(e) => { setDestination(e.target.value) }}
-                      onBlur={() => setTimeout(() => setOpenDestination(false), 150)}
-                      className="w-full h-12   border-b border-input bg-card focus:outline-none focus:ring-2 focus:ring-ring font-medium text-muted-foreground cursor-pointer px-3 py-2"
-                    />
-                    {openDestination && <div className="absolute inset-0 bg-white  mt-14" style={{ zIndex: "9999" }} onClick={() => setOpenDestination(false)}>
-                      <ul className="max-h-60 overflow-y-auto  bg-white border border-input rounded-lg p-2" onClick={(e) => e.stopPropagation()}>
-                        {filteredProvinceByDestination.map((p) => (
-                          <li
-                            key={p.id}
-                            className="cursor-pointer hover:bg-accent px-2 py-1 border-b border-gray-100"
-                            onClick={() => {
-                              setDestination(p);
-                              setOpenDestination(false);
-                              store.setDestinationProvince(p);
-                            }}
-                          >
-                            {p.name} <br/><sub>{p?.nameEn}</sub>
-                          </li>
-                        ))}
-                      </ul>
-                    </div>}
-                  </div>
-                </div>
-
                 {store.originProvinceId && store.destinationProvinceId && (
                   <div className="grid grid-cols-2 gap-2 mt-2">
                     <div className="space-y-1.5">
@@ -498,8 +665,8 @@ const Home = () => {
                       <Users className="h-3.5 w-3.5 text-muted-foreground" /> <SelectValue placeholder={t("เลือกจำนวนผู้โดยสาร")} className="text-black" />
                     </SelectTrigger>
                     <SelectContent style={{ zIndex: "999" }} >
-                      {Array.from({ length: maxPassenger }).map((n,i) => (
-                        <SelectItem key={i} value={String(i+1)}>{i+1} {t("คน")}</SelectItem>
+                      {Array.from({ length: maxPassenger }).map((n, i) => (
+                        <SelectItem key={i} value={String(i + 1)}>{i + 1} {t("คน")}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
@@ -514,20 +681,15 @@ const Home = () => {
             </div>
           </div>
 
-          {/* <section>
-            <h2 className="text-xl font-bold mb-3">ปลายทางยอดนิยม</h2>
-            <div className="grid grid-cols-2 gap-3">
-              {["กรุงเทพฯ", "เชียงใหม่", "ภูเก็ต", "ขอนแก่น"].map((city) => (
-                <Link
-                  key={city}
-                  to="/ticket"
-                  className="block text-center bg-accent text-accent-foreground py-4 rounded-lg font-medium hover:bg-accent/80 transition-colors"
-                >
-                  {city}
-                </Link>
-              ))}
-            </div>
-          </section> */}
+          <section className="mb-6 bg-white rounded-2xl p-4 shadow-sm">
+            <h2 className="text-xl font-bold mb-3">{t("เส้นทางแนะนำ")}</h2>
+            {introducRoute && introducRoute.map((route, i) => (
+              <span className="text-black text-xs mb-1 mr-2" key={i} onClick={() => autoHandleBooking(route)} style={{ cursor: "pointer", display: "inline-block", padding: "4px 8px", backgroundColor: "#f0f0f0", borderRadius: "12px" }}>
+                {route.origin} - {route.destination}
+              </span>
+            ))}
+          </section>
+
 
           {/* Promotions */}
           <section>
@@ -543,13 +705,6 @@ const Home = () => {
               onSlideChange={() => console.log('slide change')}
               onSwiper={(swiper) => console.log(swiper)}
             >
-              {/* {mockPromotions.map((promo) => (
-                <SwiperSlide className="text-left" key={promo.id}>
-                  <Link to={`/promotions/${promo.id}`} key={promo.id}>
-                    <img src={promo.imageUrl} alt={promo.title} className=" object-cover rounded-xl mb-2" />
-                    <span className="m-3 text-sm" >{promo.title}</span>
-                  </Link>
-                </SwiperSlide>))} */}
               {
                 promotions && promotions.map((promo) =>
                   <SwiperSlide className="text-left" key={promo.id}>
@@ -557,7 +712,7 @@ const Home = () => {
                       onClick={() => navigate(`/promotions/${promo.id}`)}
                       className={cn(
                         "w-full rounded-xl overflow-hidden relative cursor-pointer transition-all hover:scale-[1.02] shadow-sm",
-                        promo.bg_color || "from-primary to-primary/80"
+                        "from-primary to-primary/80"
                       )}
                       style={{ height: "10rem" }}
                     >

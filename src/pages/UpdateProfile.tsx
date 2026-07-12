@@ -1,6 +1,6 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Bus, User, Camera, ScanLine, X } from "lucide-react";
+import { ArrowLeft, Bus, User, Camera, ScanLine } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -9,15 +9,12 @@ import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { getUserMe, updateMyProfile } from "@/services/api";
 import { cn } from "@/lib/utils";
-import { normalizeOcrText } from "@/lib/ocr";
-import Webcam from "react-webcam";
-import { useTesseract } from "react-tesseract";
-import { Ocr, TextDetections } from '@capacitor-community/image-to-text';
-import axios from "axios";
+import { getDefaultOCRStatus, handleCardCaptured, maskThaiID, scanPassportOCR, scanThaiIdCardOCR } from "@/lib/OCR/ocr";
+import IDCardCamera from "@/lib/OCR/CameraPreview";
 import { t } from "i18next";
-
+ 
 const identityDocumentOptions = [
-  { value: "id_card", label: "บัตรประชาชน" },
+  { value: "id", label: "บัตรประชาชน" },
   { value: "passport", label: "หนังสือเดินทาง" },
 ];
 
@@ -25,18 +22,17 @@ const UpdateProfile = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
-  // const [ocrLoading, setOcrLoading] = useState(false);
+  const [ocrLoading, setOcrLoading] = useState(false);
+  const [ocrProgress, setOcrProgress] = useState(0);
+  const [ocrStatus, setOcrStatus] = useState(getDefaultOCRStatus());
   const [showCamera, setShowCamera] = useState(false);
-  const webcamRef = useRef<Webcam | null>(null);
-  const { recognize, error, result, isRecognizing } = useTesseract();
-  
 
   const [form, setForm] = useState({
     fullName: "",
     phone: "",
     email: "",
     avatarUrl: "",
-    idType: "id_card",
+    idType: "id",
     idNumber: "",
     expiryDate: "",
   });
@@ -50,7 +46,7 @@ const UpdateProfile = () => {
           phone: res.phone || "",
           email: res.email || "",
           avatarUrl: res.avatarUrl || "",
-          idType: res.idType || "id_card",
+          idType: res.idType || "id",
           idNumber: res.idNumber || "",
           expiryDate: res.expiryDate || "",
         });
@@ -63,134 +59,81 @@ const UpdateProfile = () => {
     setForm({ ...form, [e.target.name]: e.target.value });
   };
 
-  const handleScanCard = async () => {
-    try {
-      if (typeof window === "undefined") {
-        return;
+const handleCapture = async () => {
+  try {
+    setOcrLoading(true);
+    if (form.idType === "passport") {
+      const { passportData } = await scanPassportOCR({
+        onProgress: ({ progress, status }) => {
+          setOcrProgress(progress);
+          setOcrStatus(status);
+        },
+      });
+
+      if (!passportData.passportNumber) {
+        throw new Error("ไม่พบเลขพาสปอร์ต กรุณาถ่ายรูปใหม่ให้ชัดและตรง");
       }
 
-      setShowCamera(true);
-    } catch (error) {
-      console.error("Scan card failed", error);
+      const fullName = `${passportData.firstName ?? ""} ${passportData.lastName ?? ""}`.trim();
+
+      setForm((prev) => ({
+        ...prev,
+        idNumber: passportData.passportNumber ?? prev.idNumber,
+        fullName: fullName || prev.fullName,
+        expiryDate: passportData.expiryDate ?? prev.expiryDate,
+      }));
+
       toast({
-        title: "เกิดข้อผิดพลาด",
-        description: "ไม่สามารถเปิดกล้องได้",
-        variant: "destructive",
+        title: "อ่านพาสปอร์ตสำเร็จ",
+        description: fullName
+          ? `พบเลขพาสปอร์ต ${passportData.passportNumber} (${fullName})`
+          : `พบเลขพาสปอร์ต ${passportData.passportNumber}`,
       });
-    }
-  };
-
-  const handleCapture = async () => {
-    const imageSrc = webcamRef.current?.getScreenshot();
-    if (!imageSrc) {
-      toast({
-        title: "ไม่จับภาพได้",
-        description: "ลองเปิดกล้องและถ่ายภาพใหม่อีกครั้ง",
-        variant: "destructive",
+    } else {
+      const { cardData } = await scanThaiIdCardOCR({
+        onProgress: ({ progress, status }) => {
+          setOcrProgress(progress);
+          setOcrStatus(status);
+        },
       });
-      return;
-    }
 
-    try {
-      const response = await fetch(imageSrc);
-      const blob = await response.blob();
-      const file = new File([blob], "document.jpg", { type: blob.type || "image/jpeg" });
-      const imageUrl = URL.createObjectURL(file);
-
-      if (!imageUrl) {
-        return;
+      if (!cardData.idNumber) {
+        throw new Error("ไม่พบเลขบัตรประชาชน กรุณาถ่ายรูปใหม่ให้ชัดและตรง");
       }
 
-      //ak_1c8ada0da28745c5a8d61f7c18d2fa70
-  //     curl -X POST 'https://backend.aksonocr.com/api/v2/ocr' \
-  // -H 'X-API-Key: <YOUR_API_KEY>' \
-  // -H 'Content-Type: application/json' \
-  // -d '{
-  //   "model": "AksonOCR-preview",
-  //   "tokenConfidence": true,
-  //   "document": {
-  //     "type": "image_url",
-  //     "image_url": "https://example.com/receipt.png"
-  //   }
-  // }'
-    const resp =  await axios.post('https://backend.aksonocr.com/api/v2/ocr', {
-        model: "AksonOCR-preview",
-        tokenConfidence: true,
-        document: {
-          type: "image_url",
-          image_url: imageUrl
-        }
-      }, {
-        headers: {
-          'X-API-Key': 'ak_1c8ada0da28745c5a8d61f7c18d2fa70',
-          'Content-Type': 'application/json'
-        }
-      })
-      .then(response => {
-        console.log("OCR API response:", response.data);
-       
-        // Process the OCR result here
-       
-        return response.data
-      })
-      .catch(error => {
-        console.error("OCR API error:", error);
-        toast({
-          title: "สแกนล้มเหลว",
-          description: "ไม่สามารถประมวลผลภาพได้" + JSON.stringify(error),
-          variant: "destructive",
-        });
-      });
-      //  const textDetections = response.data?.textDetections || [];
-       toast({
-          title: " สแกนสำเร็จ",
-          description:  resp.map((detection: any) => detection.text).join(" "),
-          variant: "destructive",
-        });
-        alert(JSON.stringify(resp))
-      // await recognize(imageUrl, {
-      //   language: "tha+eng",
-      //   errorHandler: (err) => console.error("OCR error:", err),
-      //   tessedit_ocr_engine_mode: 1,
-      //   tessedit_pageseg_mode: 3,
-      //   preserve_interword_spaces: 1,
-      // });
+      const fullName = `${cardData.firstName ?? ""} ${cardData.lastName ?? ""}`.trim();
 
-      // const normalizedText = normalizeOcrText(result);
-      // console.log("OCR result:", result);
-      // console.log("Normalized OCR text:", normalizedText);
+      setForm((prev) => ({
+        ...prev,
+        idNumber: cardData.idNumber ?? prev.idNumber,
+        fullName: fullName || prev.fullName,
+        expiryDate: cardData.expiryDate ?? prev.expiryDate,
+      }));
 
-    // const data: TextDetections = await Ocr.detectText({ filename: imageUrl  });
-    // for (let detection of data.textDetections) {
-    //     console.log(detection.text);
-    // }
-
-
-      // if (normalizedText) {
-      //   setForm((prev) => ({ ...prev, idNumber: normalizedText }));
-      //   toast({
-      //     title: "สแกนสำเร็จ",
-      //     description: "ระบบดึงข้อมูลเลขเอกสารจากภาพเรียบร้อยแล้ว",
-      //   });
-      // } else {
-      //   toast({
-      //     title: "ไม่สามารถอ่านข้อมูลได้",
-      //     description: "ลองถ่ายภาพที่ชัดเจนขึ้นอีกครั้ง",
-      //     variant: "destructive",
-      //   });
-      // }
-    } catch (error) {
-      console.error("OCR failed", error);
-      const message = error instanceof Error ? error.message : "ไม่ทราบสาเหตุ";
       toast({
-        title: "สแกนล้มเหลว",
-        description: `ไม่สามารถประมวลผลภาพได้: ${message}`,
-        variant: "destructive",
+        title: "อ่านบัตรสำเร็จ",
+        description: cardData.firstName
+          ? `พบเลขบัตรประชาชน ${maskThaiID(cardData.idNumber)} (${cardData.firstName} ${cardData.lastName})`
+          : `พบเลขบัตรประชาชน ${maskThaiID(cardData.idNumber)}`,
       });
-    } finally {
-      setShowCamera(false);
     }
-  };
+  } catch (error) {
+    console.error("OCR failed:", error);
+
+    const message =
+      error instanceof Error ? error.message : "ไม่ทราบสาเหตุ";
+
+    toast({
+      title: "สแกนล้มเหลว",
+      description: `ไม่สามารถประมวลผลภาพได้: ${message}`,
+      variant: "destructive",
+    });
+  } finally {
+    setOcrLoading(false);
+    setOcrProgress(0);
+    setOcrStatus(getDefaultOCRStatus());
+  }
+};
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -229,7 +172,9 @@ const UpdateProfile = () => {
     }
   };
 
-  return (
+
+
+  return ( 
     <div className="min-h-screen bg-background flex flex-col">
       <header className="bg-primary text-primary-foreground px-4 py-3 flex items-center gap-3 shadow-md sticky top-0 z-50">
         <button onClick={() => navigate(-1)} className="p-1">
@@ -240,7 +185,7 @@ const UpdateProfile = () => {
           <h1 className="text-lg font-bold tracking-tight">{t("แก้ไขข้อมูลส่วนตัว")}</h1>
         </div>
       </header>
-
+     
       <main className="flex-1 p-4 max-w-lg mx-auto w-full" style={{ paddingBottom: "5rem" }}>
         <Card>
           <CardHeader className="text-center pb-2">
@@ -258,19 +203,8 @@ const UpdateProfile = () => {
             <p className="text-sm text-muted-foreground mt-1">{t("อัปเดตข้อมูลของคุณให้เป็นปัจจุบัน")}</p>
           </CardHeader>
           <CardContent>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              {/* <div className="space-y-2">
-                <Label htmlFor="avatarUrl">URL รูปโปรไฟล์</Label>
-                <Input
-                  id="avatarUrl"
-                  name="avatarUrl"
-                  placeholder="https://example.com/avatar.jpg"
-                  value={form.avatarUrl}
-                  onChange={handleChange}
-                />
-              </div> */}
-              <div className="space-y-2">
-                {/* <Label htmlFor="idType">ประเภทเอกสาร</Label> */}
+            <form onSubmit={handleSubmit} className="space-y-4"> 
+              <div className="space-y-2"> 
                 <select
                   id="idType"
                   name="idType"
@@ -322,50 +256,15 @@ const UpdateProfile = () => {
                   <Button
                     type="button"
                     variant="outline"
-                    onClick={handleScanCard}
-                    disabled={isRecognizing}
+                    onClick={() =>  handleCapture() }
+                    disabled={ocrLoading}
                     className="shrink-0"
                   >
                     <ScanLine className="mr-2 h-4 w-4" />
-                    {isRecognizing ? t("กำลังสแกน...") : t("สแกนบัตร")}
+                    {ocrLoading ? t("กำลังสแกน...") : t("สแกนบัตร")}
                   </Button>
-                </div>
-                <Dialog open={showCamera} onOpenChange={setShowCamera}>
-                  <DialogContent className="fixed inset-0 z-50 flex   w-screen max-w-none translate-x-0 translate-y-0 flex-col rounded-none border-0 bg-black p-0" 
-                   style={{ height: "80vh", width: "100vw" }}>
-                    <div className="flex items-center justify-between px-4 py-3 text-white">
-                      <p className="text-sm font-medium">{t("ถ่ายภาพเอกสาร")}</p>
-                      <button type="button" onClick={() => setShowCamera(false)} className="rounded-full p-1 hover:bg-white/10">
-                        <X className="h-5 w-5" />
-                      </button>
-                    </div>
-                    <div className="flex-1 overflow-hidden bg-black">
-                      <Webcam
-                        ref={webcamRef}
-                        audio={false}
-                        screenshotFormat="image/jpeg"
-                        videoConstraints={{ facingMode: "environment" }}
-                        className="h-full w-full object-cover"
-                      />
-                    </div>
-                    <div className="border-t border-white/10 bg-black/90 p-4">
-                      <Button type="button" onClick={handleCapture} disabled={isRecognizing} className="w-full">
-                        {isRecognizing ? t("กำลังประมวลผล...") : t("ถ่ายภาพ")}
-                      </Button>
-                    </div>
-                  </DialogContent>
-                </Dialog>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="expiryDate">{t("วันหมดอายุเอกสาร")}</Label>
-                <Input
-                  id="expiryDate"
-                  name="expiryDate"
-                  type="date"
-                  value={form.expiryDate}
-                  onChange={handleChange}
-                />
-              </div>
+                </div> 
+              </div> 
               </div>
               <div className="space-y-2">
                 <Label htmlFor="fullName">{t("ชื่อ-นามสกุล")}</Label>
@@ -421,8 +320,28 @@ const UpdateProfile = () => {
           </CardContent>
         </Card>
       </main>
+
+      <Dialog open={ocrLoading}>
+        <DialogContent
+          className="max-w-sm"
+          onInteractOutside={(event) => event.preventDefault()}
+          onEscapeKeyDown={(event) => event.preventDefault()}
+        >
+          <div className="space-y-3">
+            <h3 className="text-base font-semibold">กำลังสแกนเอกสาร</h3>
+            <p className="text-sm text-muted-foreground">{ocrStatus}</p>
+            <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
+              <div
+                className="h-full bg-primary transition-all duration-300"
+                style={{ width: `${ocrProgress}%` }}
+              />
+            </div>
+            <p className="text-right text-sm font-medium">{ocrProgress}%</p>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
-  );
+  ) 
 };
 
 export default UpdateProfile;
