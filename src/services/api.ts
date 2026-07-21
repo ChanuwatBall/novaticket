@@ -1,6 +1,5 @@
-// import axios from "axios";
+import { Capacitor, CapacitorHttp } from "@capacitor/core";
 
-import axios from "axios";
 const envBaseUrl = import.meta.env.VITE_API_URL?.trim() || "/";
 
 const isLocalOrLanHost = (hostname: string) => {
@@ -16,16 +15,72 @@ const isLocalOrLanHost = (hostname: string) => {
 };
 
 export const apiBaseUrl =
-  typeof window !== "undefined" && isLocalOrLanHost(window.location.hostname)
+  typeof window !== "undefined" &&
+  !Capacitor.isNativePlatform() &&
+  isLocalOrLanHost(window.location.hostname)
     ? "/"
     : envBaseUrl;
 
 
-const api = axios.create({
-  baseURL: apiBaseUrl,
-  timeout: 15000,
-  headers: { "Content-Type": "application/json" },
-});
+type ApiConfig = {
+  headers?: Record<string, string>;
+  params?: Record<string, any>;
+};
+
+type ApiResponse<T = any> = {
+  data: T;
+  status: number;
+  headers: Record<string, string>;
+  url: string;
+};
+
+const buildUrl = (path: string) => {
+  if (/^https?:\/\//i.test(path)) return path;
+
+  const baseUrl = apiBaseUrl.endsWith("/") ? apiBaseUrl.slice(0, -1) : apiBaseUrl;
+  const normalizedPath = path.startsWith("/") ? path : `/${path}`;
+
+  return baseUrl && baseUrl !== "/" ? `${baseUrl}${normalizedPath}` : normalizedPath;
+};
+
+const request = async <T = any>(
+  method: "get" | "post" | "patch",
+  path: string,
+  data?: any,
+  config: ApiConfig = {}
+): Promise<ApiResponse<T>> => {
+  const options = {
+    url: buildUrl(path),
+    headers: {
+      "Content-Type": "application/json",
+      ...(config.headers || {}),
+    },
+    params: config.params || {},
+    data,
+  };
+
+  const response =
+    method === "get"
+      ? await CapacitorHttp.get(options)
+      : method === "post"
+        ? await CapacitorHttp.post(options)
+        : await CapacitorHttp.patch(options);
+
+  if (response.status >= 400) {
+    throw {
+      response,
+      message: response.data?.error || response.data?.message || `Request failed with status ${response.status}`,
+    };
+  }
+
+  return response as ApiResponse<T>;
+};
+
+const api = {
+  get: <T = any>(path: string, config?: ApiConfig) => request<T>("get", path, undefined, config),
+  post: <T = any>(path: string, data?: any, config?: ApiConfig) => request<T>("post", path, data, config),
+  patch: <T = any>(path: string, data?: any, config?: ApiConfig) => request<T>("patch", path, data, config),
+};
 
 const getStoredUser = () => JSON.parse(localStorage.getItem("user") || "{}")
 

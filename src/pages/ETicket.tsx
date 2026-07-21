@@ -119,7 +119,7 @@ const ETicketPage = () => {
             <div className="flex justify-between"><span className="text-muted-foreground">{t("เวลา")}</span><span>{booking?.departureTime} - {booking?.arrivalTime}</span></div>
             <div className="flex justify-between"><span className="text-muted-foreground">{t("จุดขึ้นรถ")}</span><span>{booking?.boardingPoint}</span></div>
             <div className="flex justify-between"><span className="text-muted-foreground">{t("จุดลงรถ")}</span><span>{booking?.dropOffPoint}</span></div>
-            <div className="flex justify-between"><span className="text-muted-foreground">{t("ที่นั่ง")}</span><span>{booking?.passengers.map((s: any) => s.seatNumber).join(", ")}</span></div>
+            <div className="flex justify-between"><span className="text-muted-foreground">{t("ที่นั่ง")}</span><span>{booking?.passengers?.map((s: any) => s.seatNumber).join(", ")}</span></div>
             <div className="flex justify-between"><span className="text-muted-foreground">{t("ประเภทรถ")}</span><span>{booking?.busType}</span></div>
             {store?.paymentStatus === "success" && <div className="border-t border-border pt-2 mt-2">
               <div className="flex justify-between font-bold text-lg"><span>{t("ยอดชำระ")}</span><span className="text-primary">฿{booking?.total}</span></div>
