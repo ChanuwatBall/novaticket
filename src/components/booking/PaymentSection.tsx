@@ -129,7 +129,7 @@ const PaymentSection = () => {
 
           <div className="pt-3 border-t border-primary/10 space-y-3">
            <div className="space-y-2">
-            {store?.mealAddons && (totalMealCost > 0) &&(<span className="text-[10px] uppercase text-muted-foreground font-bold tracking-wider">{t("รายการอาหารและอื่นๆ")}</span>)}
+            {store?.mealAddons && (totalMealCost > 0) &&(<span className="text-[10px] uppercase text-muted-foreground font-bold tracking-wider">{t("รายการบริการและอื่นๆ")}</span>)}
             {store?.mealAddons && (totalMealCost > 0) && (
               <div className="mt-2 space-y-1">
                 {store?.mealAddons.map(addon => addon.items).flat().map(it => (

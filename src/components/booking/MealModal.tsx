@@ -3,7 +3,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import type { MealItem, PassengerMeal, MealSelection } from "@/store/bookingStore";
-import { UtensilsCrossed, Check } from "lucide-react";
+import { ShoppingBag, Check } from "lucide-react";
 import { t } from "i18next";
 
 // const MENU: MealItem[] = [
@@ -90,9 +90,9 @@ export default function MealModal({ open, onClose, seatNumber, passengerName, in
   return (
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent className="top-[46%] max-w-md w-[94vw] rounded-2xl p-0 border-none shadow-2xl max-h-[86dvh] flex flex-col overflow-hidden gap-0 sm:top-[50%]">
-        <DialogHeader className="p-5 pb-4 bg-primary rounded-t-2xl shrink-0">
-          <DialogTitle className="text-white font-bold text-lg">{t("เลือกอาหาร")}</DialogTitle>
-          <p className="text-white/80 text-xs mt-1">{t("ผู้โดยสาร")}: {passengerName || `${t("ที่นั่ง")} ${seatNumber}`}</p>
+        <DialogHeader className="p-5 pb-4   rounded-t-2xl shrink-0">
+          <DialogTitle className="text-black font-bold text-lg">{t("เลือกบริการ")}</DialogTitle>
+          <p className="text-black/80 text-xs mt-1">{t("ผู้โดยสาร")}: {passengerName || `${t("ที่นั่ง")} ${seatNumber}`}</p>
         </DialogHeader>
 
         {mealGroups.length > 0 && (
@@ -105,7 +105,7 @@ export default function MealModal({ open, onClose, seatNumber, passengerName, in
                   onClick={() => scrollToCategory(group.category)}
                   className="h-8 rounded-full border border-primary/20 bg-primary/5 px-3 text-xs font-bold text-primary whitespace-nowrap hover:bg-primary/10"
                 >
-                  {t(group.category)}
+                  {t(group.category)?.toUpperCase()}
                 </button>
               ))}
             </div>
@@ -114,7 +114,7 @@ export default function MealModal({ open, onClose, seatNumber, passengerName, in
 
         {/* Items */}
         <div ref={listRef} className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-4 space-y-4 bg-slate-50">
-          <p className="text-[10px] uppercase font-bold text-muted-foreground mb-3">{t("เลือกอาหารได้มากกว่า 1 รายการ")}</p>
+          <p className="text-[10px] uppercase font-bold text-muted-foreground mb-3">{t("เลือกได้มากกว่า 1 รายการ")}</p>
           {mealGroups.map(group => (
             <div
               key={group.category}
@@ -124,7 +124,7 @@ export default function MealModal({ open, onClose, seatNumber, passengerName, in
               className="scroll-mt-2"
             >
               <div className="mb-2 flex items-center justify-between">
-                <h3 className="text-sm font-extrabold text-slate-800">{t(group.category)}</h3>
+                <h3 className="text-sm font-extrabold text-slate-800">{t(group.category)?.toLocaleUpperCase()}</h3>
                 <span className="text-[10px] font-bold text-muted-foreground">{group.items.length} {t("รายการ")}</span>
               </div>
               <div className="space-y-2">
@@ -137,10 +137,21 @@ export default function MealModal({ open, onClose, seatNumber, passengerName, in
                       className={`w-full flex items-center justify-between p-3 rounded-xl border-2 transition-all text-left ${qty > 0 ? `border-primary bg-primary/5` : "border-border bg-white hover:border-muted-foreground/30"}`}
                     >
                       <div className="flex items-center gap-3">
-                        <div className={`w-8 h-8 rounded-full flex items-center justify-center ${qty > 0 ? "bg-primary/10" : "bg-slate-100"}`}>
-                          {qty > 0 ? <Check className={`h-4 w-4 text-primary`} /> : <UtensilsCrossed className="h-4 w-4 text-muted-foreground" />}
-                        </div>
-                        <span className="font-medium text-sm">{t(item.name)}</span>
+                        {
+                           item?.imageUrl ? <img src={item.imageUrl} alt={item.name}  style={{width:"4rem"}} />  :
+                        <div style={{width:"4rem" ,height:"2rem"}} className={`  rounded-full flex items-center justify-center ${qty > 0 ? "bg-primary/10" : "bg-slate-100"}`}>
+                          {qty > 0 ? <Check className={`h-4 w-4 text-primary`} /> :
+                          item.category === "beverage" ? <ShoppingBag className="h-4 w-4 text-muted-foreground" /> :
+                          
+                           <ShoppingBag className="h-4 w-4 text-muted-foreground" />}
+                        </div>}
+                        <span className="font-medium text-sm">
+                          {t(item.name)} <br/>
+                          {/* <Badge variant="outline" className={`font-bold text-xs ${qty > 0 ? `text-primary border-primary` : ""}`}>
+                          ฿{item.price}
+                        </Badge> */}
+                         ฿{item.price}
+                        </span>
                       </div>
                       <div className="flex items-center gap-2">
                         <div className="flex items-center gap-2">
@@ -148,9 +159,7 @@ export default function MealModal({ open, onClose, seatNumber, passengerName, in
                           <div className="w-8 text-center font-bold">{qty}</div>
                           <button onClick={() => changeQty(item, +1)} className="w-7 h-7 rounded-md bg-slate-100 text-sm font-bold">+</button>
                         </div>
-                        <Badge variant="outline" className={`font-bold text-xs ${qty > 0 ? `text-primary border-primary` : ""}`}>
-                          ฿{item.price}
-                        </Badge>
+                        
                       </div>
                     </div>
                   );
@@ -160,7 +169,7 @@ export default function MealModal({ open, onClose, seatNumber, passengerName, in
           ))}
           {mealGroups.length === 0 && (
             <div className="rounded-xl border bg-white p-4 text-center text-sm text-muted-foreground">
-              {t("ไม่มีรายการอาหาร")}
+              {t("ไม่มีรายการบริการบนรถ")}
             </div>
           )}
         </div>
@@ -183,12 +192,13 @@ export default function MealModal({ open, onClose, seatNumber, passengerName, in
               )}
             </div>
             <div className="flex items-center justify-between">
-              <div>
-                <p className="text-[10px] text-muted-foreground">{t("ราคาอาหารรวม")}</p>
+              {/* <div>
+                <p className="text-[10px] text-muted-foreground">{t("ราคารวม")}</p>
                 <p className="text-xl font-extrabold text-primary">฿{total.toLocaleString()}</p>
-              </div>
-              <Button onClick={handleConfirm} className="h-11 px-8 font-bold bg-primary hover:opacity-90 border-none text-white">
+              </div> */}
+              <Button onClick={handleConfirm} className="h-11 px-8 font-bold bg-primary hover:opacity-90 border-none text-white flex items-center   gap-2 w-full" style={{justifyContent:"space-between"}} >
                 {t("ตกลง")}
+                <p className="text-xl font-extrabold text-white">฿{total.toLocaleString()}</p>
               </Button>
             </div>
           </div>

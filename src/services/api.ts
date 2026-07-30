@@ -178,6 +178,7 @@ export type NewBooking = {
   "destinationProvinceId": string,
   "boardingPointId": string,
   "dropOffPointId": string,
+  "useStamp": boolean,
   "passengers": {
     "seatId": string,
     "seatNumber": string,

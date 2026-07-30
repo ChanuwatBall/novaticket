@@ -1,29 +1,26 @@
 import BookingLayout from "@/components/BookingLayout";
 import { useBookingStore } from "@/store/bookingStore";
-import { provinces, boardingPoints } from "@/data/mockData";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { CheckCircle, ClockAlert, Download, Mail, Loader2 } from "lucide-react";
+import { CheckCircle, ClockAlert, Download, Loader2 } from "lucide-react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { bookingDetail } from "@/services/api";
 import QRCode from "qrcode";
 import { t } from "i18next";
+import liff from "@line/liff";
+import { useToast } from "@/hooks/use-toast";
+import { encodeTicketPayload } from "@/lib/ticketPdf";
 
 const ETicketPage = () => {
+  const { toast } = useToast();
   const { bookingref } = useParams<{ bookingref: string }>();
   const store = useBookingStore();
   const navigate = useNavigate();
   const [booking, setBooking] = useState<any>(null);
   const [qrCode, setQrCode] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
-
-  const originName = store.originProvinceId?.name
-  const destName = store.destinationProvinceId?.name
-  const boardingName = store.boardingPointId?.name
-  const dropOffName = store.dropOffPointId?.name
-  const tripPrice = store.selectedTrip?.price ?? 0;
-  const total = Math.max(0, tripPrice * store.selectedSeats.length - store.discount);
+  const [isPdfLoading, setIsPdfLoading] = useState(false);
 
   const continueBooking = () => {
     navigate("/ticket");
@@ -68,6 +65,40 @@ const ETicketPage = () => {
       setIsLoading(false);
     }
   }, [bookingref]);
+
+  const handleDownloadPdf = async () => {
+    if (!booking) return;
+
+    setIsPdfLoading(true);
+    try {
+      const payload = encodeTicketPayload({ booking, qrCode });
+      const downloadUrl = new URL(`/e-ticket/${booking.bookingReference || bookingref}/pdf`, window.location.origin);
+      downloadUrl.searchParams.set("payload", payload);
+
+      if (liff.isInClient?.()) {
+        liff.openWindow({
+          url: downloadUrl.toString(),
+          external: true,
+        });
+      } else {
+        window.open(downloadUrl.toString(), "_blank", "noopener,noreferrer");
+      }
+
+      toast({
+        title: t("กำลังเปิดเบราว์เซอร์"),
+        description: t("ระบบจะสร้างและดาวน์โหลด PDF ในเบราว์เซอร์ภายนอก"),
+      });
+    } catch (error) {
+      console.error("Error opening ticket PDF download page:", error);
+      toast({
+        title: t("เกิดข้อผิดพลาด"),
+        description: t("ไม่สามารถเปิดหน้าดาวน์โหลด PDF ได้"),
+        variant: "destructive",
+      });
+    } finally {
+      setIsPdfLoading(false);
+    }
+  };
 
   if (isLoading) {
     return (
@@ -146,15 +177,10 @@ const ETicketPage = () => {
         {/* Action Buttons */}
         {booking?.paymentStatus === "paid" && (
           <div className="space-y-2">
-            <Button variant="outline" className="w-full h-12" onClick={() => { }}>
-              <Download className="mr-2 h-4 w-4" />
-              {t("ดาวน์โหลด")} PDF
+            <Button variant="outline" className="w-full h-12" onClick={handleDownloadPdf} disabled={isPdfLoading || !qrCode}>
+              {isPdfLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Download className="mr-2 h-4 w-4" />}
+              {isPdfLoading ? t("กำลังเปิด PDF...") : `${t("ดาวน์โหลด")} PDF`}
             </Button>
-            <Button variant="outline" className="w-full h-12" onClick={() => { }}>
-              <Mail className="mr-2 h-4 w-4" />
-              {t("ส่งไปยังอีเมล")}
-            </Button>
-
           </div>)}
         <div className="space-y-2 pt-4">
           {booking?.paymentStatus !== "paid" &&

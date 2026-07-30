@@ -15,6 +15,7 @@ import PassengerInfo from "./pages/PassengerInfo";
 import Payment from "./pages/Payment";
 import PaymentQR from "./pages/PaymentQR";
 import ETicket from "./pages/ETicket";
+import ETicketPdfDownload from "./pages/ETicketPdfDownload";
 import Complaints from "./pages/Complaints";
 import MyTickets from "./pages/MyTickets";
 import TicketDetail from "./pages/TicketDetail";
@@ -41,6 +42,7 @@ const LIFF_INIT_TIMEOUT_MS = 12_000;
 
 const shouldSkipLiffInit = () => {
   const { protocol } = window.location;
+  if (/^\/e-ticket\/[^/]+\/pdf\/?$/.test(window.location.pathname)) return true;
   return protocol !== "https:" || window.location.href.startsWith("https://lovable.dev");
 };
 
@@ -217,6 +219,7 @@ const App = () => {
             <Route path="/payment" element={<Payment />} />
             <Route path="/payment/qr" element={<PaymentQR />} />
             <Route path="/e-ticket/:bookingref" element={<ETicket />} />
+            <Route path="/e-ticket/:bookingref/pdf" element={<ETicketPdfDownload />} />
             <Route path="/complaints" element={<Complaints />} />
             <Route path="/my-tickets" element={<MyTickets />} />
             <Route path="/my-tickets/:ticketId" element={<TicketDetail />} />

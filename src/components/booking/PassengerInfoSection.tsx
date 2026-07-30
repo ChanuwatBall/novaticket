@@ -13,26 +13,33 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
-import { Tag, Ticket as TicketIcon, Check, User, Coins, Route, UtensilsCrossed } from "lucide-react";
+import { Tag, Ticket as TicketIcon, Check, User, Coins, Route, UtensilsCrossed , ShoppingBag } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import MealModal from "./MealModal";
 import { t } from "i18next";
+import { supabase } from "@/supabase/client";
 
 interface PassengerInfoSectionProps {
   onContinue: () => void;
 }
 
-const passengerTypes = [
-  { value: "male", label: "ชาย" },
-  { value: "female", label: "หญิง" },
-  { value: "child", label: "เด็ก" },
-  { value: "monk", label: "พระสงฆ์" },
-] as const;
+// const passengerTypes = [
+//   { value: "male", label: "ชาย" },
+//   { value: "female", label: "หญิง" },
+//   { value: "child", label: "เด็ก" },
+//   { value: "monk", label: "พระสงฆ์" },
+// ] as const;
 
 const PassengerInfoSection = ({ onContinue }: PassengerInfoSectionProps) => {
   const store = useBookingStore();
   const tripPrice = store.selectedTrip?.price ?? 0;
+
+  const [passengerTypes , setPassengerType] = useState( [
+    {"idx":5,"id":"da0b8eea-","code":"general","name_th":"ทั่วไป","name_en":"General","requires_document":false},
+  // { value: "male", label: "ชาย" },
+  // { value: "female", label: "หญิง" }
+])
 
   const [passengers, setPassengers] = useState<PassengerInfo[]>(() => {
     const user = localStorage.getItem("user");
@@ -92,26 +99,27 @@ const PassengerInfoSection = ({ onContinue }: PassengerInfoSectionProps) => {
         setUserPointsValue(userpoint);
     }
     getpoints();
+    const setuppasstype = async()=>{
+      const {data:types,error} = await supabase.from('passenger_tiers').select('*').eq('requires_document',false) ;
+      if (error) {
+        console.error("Error fetching passenger types:", error);
+      } else {
+        setPassengerType(types || [])
+      } 
+    }
+    setuppasstype()
     if (user) { 
       const userData = JSON.parse(user);
       console.log("User data from localStorage:", userData);
-
+      const dayweek = new Date(store.selectedTrip?.date ?? "").toLocaleString("en-US", { weekday: "long" }); 
       getPromotionsTrip({ 
         routeId: store.selectedTrip?.id, 
         phone: userData?.user?.phone,
+        dayOfWeek: dayweek
     } )
       .then(data => {
         const apiPromos = data || [];
-        // const routeOrigin = store.selectedTrip?.origin || 'กรุงเทพฯ';
-        // const routeDest = store.selectedTrip?.destination || 'นครราชสีมา';
-        // const freeRoutePromo = {
-        //   id: 'free-route-1',
-        //   promoCode: 'FREERIDE10',
-        //   title: `ฟรี 1 เที่ยว ${routeOrigin}-${routeDest}`,
-        //   description: 'สะสมครบ 10 เที่ยวแล้ว!',
-        //   discountAmount: tripPrice,
-        //   isRouteReward: true,
-        // };
+      
         console.log("Fetched promotions:", apiPromos);
         setPromotions(apiPromos);
       });
@@ -255,7 +263,7 @@ const PassengerInfoSection = ({ onContinue }: PassengerInfoSectionProps) => {
                     <span className="text-[10px] text-muted-foreground font-medium">{t("ที่นั่ง")} {p.seatNumber}</span>
                   </div>
                   <Badge variant="outline" className="ml-auto bg-primary/5 text-primary border-primary/20">
-                    {t(passengerTypes.find(t => t.value === p.passengerType)?.label)}
+                    {t(passengerTypes.find(t => t.id === p.passengerType)?.name_th)}
                   </Badge>
                 </div>
               </AccordionTrigger>
@@ -289,7 +297,7 @@ const PassengerInfoSection = ({ onContinue }: PassengerInfoSectionProps) => {
                       <Select value={p.passengerType} onValueChange={(v) => updatePassenger(i, "passengerType", v)}>
                         <SelectTrigger className="h-11 shadow-sm"><SelectValue /></SelectTrigger>
                         <SelectContent>
-                          {passengerTypes.map((pt) => <SelectItem key={pt.value} value={pt.value}>{t(pt.label)}</SelectItem>)}
+                          {passengerTypes.map((pt) => <SelectItem key={pt.idx} value={pt.code}>{t(pt.name_th)}</SelectItem>)}
                         </SelectContent>
                       </Select>
                     </div>
@@ -305,8 +313,9 @@ const PassengerInfoSection = ({ onContinue }: PassengerInfoSectionProps) => {
                   <div className="rounded-xl border-2 border-dashed border-primary/20 bg-primary/5 p-3">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
-                        <UtensilsCrossed className="h-4 w-4 text-primary" />
-                        <span className="text-xs font-bold text-primary">{t("อาหารบนรถ")}</span>
+                        <ShoppingBag   className="h-4 w-4 text-primary" />
+
+                        <span className="text-xs font-bold text-primary">{t("รายการบริการบนรถ")}</span>
                       </div>
                       <Button
                         size="sm"
@@ -314,7 +323,7 @@ const PassengerInfoSection = ({ onContinue }: PassengerInfoSectionProps) => {
                         className="h-7 text-[11px] font-bold border-primary/30 text-primary bg-white hover:bg-primary/5"
                         onClick={() => setMealModalSeatId(p.seatId)}
                       >
-                        {meal ? t("เปลี่ยนอาหาร") : t("+ เพิ่มอาหาร")}
+                        {meal ? t("เปลี่ยนรายการ") : t("+ เพิ่มรายการ")}
                       </Button>
                     </div>
                       {meal && (mealTotal > 0) ? (
@@ -323,12 +332,12 @@ const PassengerInfoSection = ({ onContinue }: PassengerInfoSectionProps) => {
                             <div key={it.item.id} className="flex justify-between text-[11px]"><span className="text-muted-foreground">{it.item.name} x{it.qty}</span><span className="font-bold text-primary">฿{(it.item.price * it.qty).toLocaleString()}</span></div>
                           ))}
                           <div className="flex justify-between text-[11px] font-extrabold pt-1 border-t border-primary/20">
-                            <span className="text-primary">{t("รวมอาหาร")}</span>
+                            <span className="text-primary">{t("รวม")}</span>
                             <span className="text-primary">฿{mealTotal}</span>
                           </div>
                         </div>
                       ) : (
-                        <p className="text-[10px] text-primary/60 mt-1">{t("ยังไม่ได้เลือกอาหาร")}</p>
+                        <p className="text-[10px] text-primary/60 mt-1">{t("ยังไม่ได้เลือก")}</p>
                       )}
                   </div>
                 </div>
@@ -377,12 +386,12 @@ const PassengerInfoSection = ({ onContinue }: PassengerInfoSectionProps) => {
                 </div>
               </div>
             ))}
-            {promotions.length === 0 && (
+            {/* {promotions.length === 0 && (
               <p className="text-xs text-muted-foreground py-2 text-center w-full">{t("ไม่มีโปรโมชั่นที่เลือกได้ในขณะนี้")}</p>
-            )}
+            )} */}
           </div>
 
-          <label className="text-sm font-bold flex items-center gap-1.5 mb-2">{t("หรือระบุรหัสโปรโมชั่น")}</label>
+          <label className="text-sm font-bold flex items-center gap-1.5 mb-2">{t("ระบุรหัสโปรโมชั่น")}</label>
           <div className="flex gap-2">
             <Input placeholder={t("กรอกรหัส")} value={promoInput} onChange={(e) => { setPromoInput(e.target.value); setPromoApplied(false); setPromoError(""); }} className="h-12 flex-1 border-dashed" />
             <Button onClick={applyPromo} variant="outline" className="h-12 px-6">{t("ใช้โค้ด")}</Button>

@@ -172,7 +172,8 @@ const PaymentQRPage = () => {
           }),
           "addOns": bookingBody?.addOns ,
           "promoCode": store.promoCode,
-          "omiseChargeId": payqr.chargeId
+          "omiseChargeId": payqr.chargeId,
+          "useStamp": false
         }
         console.log("bookingPayload ", bookingPayload)
         const bookingres = await createBooking(bookingPayload)
