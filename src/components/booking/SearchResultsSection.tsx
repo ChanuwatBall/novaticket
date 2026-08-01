@@ -197,7 +197,7 @@ const SearchResultsSection = ({ onSelectTrip }: SearchResultsSectionProps) => {
                                       <div className="h-[1.5px] flex-1 bg-slate-200 rounded-full" />
                                     </div>
                                     <span className="text-[9px] font-bold text-slate-400 tracking-tight">
-                                      {trip.route_id?.duration || "3 ชม. 0 นาที"}
+                                      {trip.route_id?.duration }
                                     </span>
                                   </div>
                                 </div>
@@ -212,7 +212,7 @@ const SearchResultsSection = ({ onSelectTrip }: SearchResultsSectionProps) => {
                           </div>
 
                           <div className="flex flex-col items-end justify-center h-full min-w-[80px]">
-                            <span className="text-xl font-black text-primary leading-none">฿{trip.price}</span>
+                            <span className="text-xl font-black text-primary leading-none">฿{trip.fare}</span>
                             <Badge variant="secondary" className="h-5 px-2 text-[9px] text-slate-400 font-bold bg-slate-100/50 hover:bg-slate-100">
                               ({t("ว่าง")}) {trip.available_seats} {t("ที่นั่ง")}
                             </Badge>

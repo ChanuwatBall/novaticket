@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { useBookingStore } from "@/store/bookingStore";
 import { Button } from "@/components/ui/button";
@@ -22,20 +22,40 @@ const getPassengerMultiplier = (type: string) => {
   }
 };
 
+const getCompanySalesSettings = () => {
+  try {
+    const company = JSON.parse(localStorage.getItem("company") || "{}");
+    const settings = company?.company_sales_settings;
+    return Array.isArray(settings) ? settings[0] : settings;
+  } catch (error) {
+    console.error("Failed to parse company sales settings:", error);
+    return null;
+  }
+};
+
+const toNumber = (value: unknown) => {
+  const amount = Number(value);
+  return Number.isFinite(amount) ? amount : 0;
+};
+
 const PaymentSection = () => {
   const navigate = useNavigate();
   const store = useBookingStore();
   const [eWalletExpanded, setEWalletExpanded] = useState(false);
   const [selectedEWallet, setSelectedEWallet] = useState("");
 
-  const tripPrice = store.selectedTrip?.price ?? 0;
+  const tripPrice = store.selectedTrip?.fare ?? 0;
   const subtotal = store.passengers.reduce((sum, p) => {
     return sum + (tripPrice * getPassengerMultiplier(p.passengerType));
   }, 0);
   const totalMealCost = store.mealAddons.reduce((sum, m) => sum + m.items.reduce((s, it) => s + (it.item.price * it.qty), 0), 0);
 
-
-  const total = Math.max(0, (subtotal + totalMealCost) - store.discount);
+  const companySalesSettings = useMemo(() => getCompanySalesSettings(), []);
+  const baseTotal = Math.max(0, (subtotal + totalMealCost) - store.discount);
+  const fee = toNumber(companySalesSettings?.fee);
+  const omiseQrFeePercent = toNumber(companySalesSettings?.omise_qr_fee);
+  const omiseQrFee = Math.round(baseTotal * omiseQrFeePercent / 100);
+  const total = Math.max(0, baseTotal + fee + omiseQrFee);
 
   const handlePaymentMethodChange = (value: string) => {
     store.setPaymentMethod(value);
@@ -79,6 +99,9 @@ const PaymentSection = () => {
       seat: store.selectedSeats,
       subtotal,
       discount: store.discount,
+      fee,
+      omiseQrFee,
+      omiseQrFeePercent,
       total,
     };
 
@@ -167,7 +190,7 @@ const PaymentSection = () => {
 
           <div className="pt-3 border-t border-primary/10 space-y-2">
             <div className="flex justify-between text-xs">
-              <span className="text-muted-foreground">{t("ยอดรวม")} ({store.selectedSeats.length} {t("ที่นั่ง")})</span>
+              <span className="text-muted-foreground">{t("ยอดรวม")} {store.selectedSeats.length} {t("ที่นั่ง")}</span>
               <span className="font-bold">฿{subtotal}</span>
             </div>
             {store.discount > 0 && (
@@ -176,9 +199,25 @@ const PaymentSection = () => {
                 <span>-฿{store.discount}</span>
               </div>
             )} 
+            
+            <div className="flex justify-between text-xs">
+              <span className="text-muted-foreground">{t("ค่าบริการ")} {t("และอื่นๆ")} {t("รวม")}  </span>
+              <span className="font-bold">฿{totalMealCost}</span>
+            </div>
+              <div className="flex justify-between text-xs">
+                <span className="text-muted-foreground">{t("ค่าธรรมเนียม")}</span>
+                <span className="font-bold">฿{(fee+omiseQrFee).toLocaleString()}</span>
+              </div>
+            
+            {/* {omiseQrFee > 0 && (
+              <div className="flex justify-between text-xs">
+                <span className="text-muted-foreground">{t("ค่าธรรมเนียม QR")} ({omiseQrFeePercent}%)</span>
+                <span className="font-bold">฿{omiseQrFee.toLocaleString()}</span>
+              </div>
+            )} */}
             <div className="flex justify-between items-center pt-2 border-t border-primary/10">
               <span className="font-black text-sm uppercase">{t("รวมที่ต้องชำระ")}</span>
-              <span className="text-xl font-black text-primary">฿{total}</span>
+              <span className="text-xl font-black text-primary">฿{total.toLocaleString()}</span>
             </div>
           </div>
         </CardContent>
@@ -234,7 +273,7 @@ const PaymentSection = () => {
       </div>
 
       <Button onClick={handleConfirmPayment} disabled={!isPayable} className="w-full h-14 text-lg font-bold shadow-lg" size="lg">
-        {t("ชำระเงินรวม")} ฿{total}
+        {t("ชำระเงินรวม")} ฿{total.toLocaleString()}
       </Button>
     </div>
   );

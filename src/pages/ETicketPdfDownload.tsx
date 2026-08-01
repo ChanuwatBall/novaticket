@@ -17,6 +17,16 @@ const createBookingQr = async (booking: any) => {
   return QRCode.toDataURL(btoa(qrBookingPayload));
 };
 
+const getStoredCompany = () => {
+  try {
+    const companyStr = localStorage.getItem("company");
+    return companyStr ? JSON.parse(companyStr) : null;
+  } catch (error) {
+    console.error("Failed to parse company from localStorage:", error);
+    return null;
+  }
+};
+
 const ETicketPdfDownload = () => {
   const { bookingref } = useParams<{ bookingref: string }>();
   const [searchParams] = useSearchParams();
@@ -60,8 +70,8 @@ const ETicketPdfDownload = () => {
 
     setStatus("loading");
     setMessage("กำลังสร้าง PDF...");
-    const pdf = await createTicketPdf(targetBooking, targetQrCode);
-    pdf.save(`e-ticket-${targetBooking.bookingReference || bookingref}.pdf`);
+    const pdf = await createTicketPdf(targetBooking, targetQrCode, getStoredCompany());
+    pdf.save(`e-ticket-${targetBooking.bookingReference || bookingref}.pdf`); 
     setHasDownloaded(true);
     setStatus("ready");
     setMessage("ดาวน์โหลด PDF เรียบร้อยแล้ว");

@@ -338,6 +338,7 @@ const en = {
     "เวลา": "Time",
     "ผู้โดยสาร": "Passengers",
     "ดาวน์โหลด": "Download",
+    "ดาวน์โหลดตั๋ว": "Download Ticket",
     "ส่งไปยังอีเมล": "Send to Email",
     "ทำรายการใหม่": "Make Another Booking",
     "ติดตามรถ": "Track Bus",

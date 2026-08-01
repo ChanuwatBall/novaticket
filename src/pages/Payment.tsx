@@ -22,7 +22,7 @@ const PaymentPage = () => {
   const [eWalletExpanded, setEWalletExpanded] = useState(false);
   const [selectedEWallet, setSelectedEWallet] = useState("");
 
-  const tripPrice = store.selectedTrip?.price ?? 0;
+  const tripPrice = store.selectedTrip?.fare ?? 0;
   const subtotal = tripPrice * store.selectedSeats.length;
   const total = Math.max(0, subtotal - store.discount);
 

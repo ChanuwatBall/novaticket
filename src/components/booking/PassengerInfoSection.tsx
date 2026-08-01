@@ -33,7 +33,7 @@ interface PassengerInfoSectionProps {
 
 const PassengerInfoSection = ({ onContinue }: PassengerInfoSectionProps) => {
   const store = useBookingStore();
-  const tripPrice = store.selectedTrip?.price ?? 0;
+  const tripPrice = store.selectedTrip?.fare ?? 0;
 
   const [passengerTypes , setPassengerType] = useState( [
     {"idx":5,"id":"da0b8eea-","code":"general","name_th":"ทั่วไป","name_en":"General","requires_document":false},
@@ -262,9 +262,9 @@ const PassengerInfoSection = ({ onContinue }: PassengerInfoSectionProps) => {
                     </span>
                     <span className="text-[10px] text-muted-foreground font-medium">{t("ที่นั่ง")} {p.seatNumber}</span>
                   </div>
-                  <Badge variant="outline" className="ml-auto bg-primary/5 text-primary border-primary/20">
+                  {/* <Badge variant="outline" className="ml-auto bg-primary/5 text-primary border-primary/20">
                     {t(passengerTypes.find(t => t.id === p.passengerType)?.name_th)}
-                  </Badge>
+                  </Badge> */}
                 </div>
               </AccordionTrigger>
               <AccordionContent className="pb-4 space-y-4 pt-2 border-t border-dashed">

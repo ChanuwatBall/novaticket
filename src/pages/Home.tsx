@@ -135,6 +135,27 @@ const Home = () => {
     };
 
     const conf = async () => {
+      try{
+        const { data: company, error } = await supabase
+          .from('companies')
+          .select(`
+            *,
+            company_sales_settings (
+              *
+            )
+          `)
+          .eq('name', import.meta.env.VITE_COMPANY_NAME)
+          .single()
+
+        if (error) {
+          console.error("Failed to load company", error)
+        } else {
+          localStorage.setItem("company", JSON.stringify(company))
+          console.log("company ", company)
+        }
+      }catch(e){
+        console.error("Home company check failed", e)
+      }
       try {
         const data: any = await getRoutes()
         console.log("routes_group ", data)

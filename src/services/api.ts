@@ -746,6 +746,7 @@ export interface Trip {
   date: string;
   origin: string;
   destination: string;
+  fare: number;
 }
 
 // // ─────────────────────────────────────────────

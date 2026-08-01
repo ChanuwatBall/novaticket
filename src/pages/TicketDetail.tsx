@@ -44,6 +44,15 @@ const getTicketStatus = (ticket: any) => {
   }
 };
 
+const getTripArrivalTime = (ticket: any) => {
+  return moment(`${ticket.date} ${ticket.arrivalTime}`, "YYYY-MM-DD HH:mm");
+};
+
+const hasTripEnded = (ticket: any) => {
+  const arrivalTime = getTripArrivalTime(ticket);
+  return arrivalTime.isValid() && moment().isAfter(arrivalTime);
+};
+
 const passengerTypeLabels: Record<string, string> = {
   male: "ชาย",
   female: "หญิง",
@@ -143,6 +152,7 @@ const TicketDetail = () => {
   }
 
   const statusInfo = getTicketStatus(ticket);
+  const isTripEnded = hasTripEnded(ticket);
 
   const handleContinuePayment = async () => {
     const trip = await findTripForTicket(ticket)
@@ -224,6 +234,8 @@ const TicketDetail = () => {
   const handleCheckin = async () => {
     if (!ticket) return;
 
+    if (hasTripEnded(ticket)) return;
+
     const departureTime = moment(`${ticket.date} ${ticket.departureTime}`, "YYYY-MM-DD HH:mm");
     if (moment().isBefore(departureTime)) {
       toast({
@@ -267,12 +279,17 @@ const TicketDetail = () => {
   };
 
   const handleTrackBus = () => {
-    if (!ticket?.tripId) return;
+    if (!ticket?.tripId || hasTripEnded(ticket)) return;
     const params = new URLSearchParams({
       tripId: ticket.tripId,
       bookingReference: ticket.bookingReference || "",
     });
     navigate(`/track?${params.toString()}`);
+  };
+
+  const handleDownloadTicket = () => {
+    if (!ticket?.id) return;
+    navigate(`/e-ticket/${ticket.id}/pdf`);
   };
 
   return (
@@ -419,7 +436,7 @@ const TicketDetail = () => {
               <span className="text-muted-foreground">{t("ช่องทางชำระ")}</span>
               <span className="text-right font-medium">{ticket.paymentMethod}</span>
               <span className="text-muted-foreground">{t("ราคา/ที่นั่ง")}</span>
-              <span className="text-right font-medium">฿{ticket.pricePerSeat.toLocaleString()}</span>
+              <span className="text-right font-medium">฿{ticket.pricePerSeat?.toLocaleString()}</span>
               <span className="text-muted-foreground">{t("จำนวนที่นั่ง")}</span>
               <span className="text-right font-medium">{ticket.seats.length}</span>
               {ticket.promoCode && (
@@ -455,6 +472,7 @@ const TicketDetail = () => {
  
               <Button
                 onClick={handleTrackBus}
+                disabled={isTripEnded}
                 className="w-full h-14 bg-brand-gradient text-white font-bold text-lg shadow-lg"
               >
                 <Navigation className="mr-2 h-6 w-6" />
@@ -463,11 +481,20 @@ const TicketDetail = () => {
 
             <Button
               onClick={handleCheckin}
-              disabled={isCheckinLoading}
+              disabled={isCheckinLoading || isTripEnded}
               className="w-full h-14 bg-primary hover:bg-primary-700 text-white font-bold text-lg shadow-lg"
             >
               <CheckIcon className="mr-2 h-6 w-6" />
               {isCheckinLoading ? t("กำลังดำเนินการ...") : t("เช็คอิน")}
+            </Button>
+
+            <Button
+              onClick={handleDownloadTicket}
+              variant="outline"
+              className="w-full h-14 font-bold text-lg shadow-sm"
+            >
+              <Download className="mr-2 h-6 w-6" />
+              {t("ดาวน์โหลดตั๋ว")}
             </Button>
           </div>
         )}

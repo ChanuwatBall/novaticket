@@ -11,6 +11,17 @@ import { t } from "i18next";
 import liff from "@line/liff";
 import { useToast } from "@/hooks/use-toast";
 import { encodeTicketPayload } from "@/lib/ticketPdf";
+import { calculatePaymentSummary } from "@/lib/paymentSummary";
+
+const getStoredCompany = () => {
+  try {
+    const companyStr = localStorage.getItem("company");
+    return companyStr ? JSON.parse(companyStr) : null;
+  } catch (error) {
+    console.error("Failed to parse company from localStorage:", error);
+    return null;
+  }
+};
 
 const ETicketPage = () => {
   const { toast } = useToast();
@@ -21,6 +32,7 @@ const ETicketPage = () => {
   const [qrCode, setQrCode] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [isPdfLoading, setIsPdfLoading] = useState(false);
+  const paymentSummary = calculatePaymentSummary(booking, getStoredCompany());
 
   const continueBooking = () => {
     navigate("/ticket");
@@ -152,8 +164,29 @@ const ETicketPage = () => {
             <div className="flex justify-between"><span className="text-muted-foreground">{t("จุดลงรถ")}</span><span>{booking?.dropOffPoint}</span></div>
             <div className="flex justify-between"><span className="text-muted-foreground">{t("ที่นั่ง")}</span><span>{booking?.passengers?.map((s: any) => s.seatNumber).join(", ")}</span></div>
             <div className="flex justify-between"><span className="text-muted-foreground">{t("ประเภทรถ")}</span><span>{booking?.busType}</span></div>
-            {store?.paymentStatus === "success" && <div className="border-t border-border pt-2 mt-2">
-              <div className="flex justify-between font-bold text-lg"><span>{t("ยอดชำระ")}</span><span className="text-primary">฿{booking?.total}</span></div>
+            {(store?.paymentStatus === "success" || booking?.paymentStatus === "paid") && <div className="border-t border-border pt-2 mt-2 space-y-2">
+              <div className="flex justify-between text-xs">
+                <span className="text-muted-foreground">{t("ยอดรวม")} {paymentSummary.seatCount} {t("ที่นั่ง")}</span>
+                <span className="font-bold">฿{paymentSummary.seatSubtotal.toLocaleString()}</span>
+              </div>
+              {paymentSummary.discount > 0 && (
+                <div className="flex justify-between text-xs text-primary font-bold">
+                  <span>{t("ส่วนลดโปรโมชั่น")}</span>
+                  <span>-฿{paymentSummary.discount.toLocaleString()}</span>
+                </div>
+              )}
+              <div className="flex justify-between text-xs">
+                <span className="text-muted-foreground">{t("ค่าบริการ")} {t("และอื่นๆ")} {t("รวม")}</span>
+                <span className="font-bold">฿{booking?.addonTotal?.toLocaleString()}</span>
+              </div>
+              <div className="flex justify-between text-xs">
+                <span className="text-muted-foreground">{t("ค่าธรรมเนียม")}</span>
+                <span className="font-bold">฿{paymentSummary.feeTotal.toLocaleString()}</span>
+              </div>
+              <div className="flex justify-between font-bold text-lg pt-2 border-t border-border">
+                <span>{t("ยอดรวมสุทธิ")}</span>
+                <span className="text-primary">฿{(paymentSummary.total + paymentSummary.feeTotal ).toLocaleString()}</span>
+              </div>
             </div>}
           </CardContent>
         </Card>
