@@ -326,11 +326,11 @@ const TicketDetail = () => {
   
     if(!liff.isInClient()) {
       liff.openWindow({
-        url: `${window.location.origin}/e-ticket/${ticket.id}/pdf?openExternalBrowser=1`,
+        url: `${window.location.origin}/e-ticket/${ticket.bookingReference}/pdf?openExternalBrowser=1`,
         external: true
       });
     }else{ 
-      navigate(`/e-ticket/${ticket.id}/pdf`);
+      navigate(`/e-ticket/${ticket.bookingReference}/pdf`);
     }
   };
 
