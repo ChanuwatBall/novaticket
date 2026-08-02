@@ -125,7 +125,7 @@ export const useBookingStore = create<BookingState>((set) => ({
   setBoardingPoint: (boardingPointId) => set({ boardingPointId }),
   setDropOffPoint: (dropOffPointId) => set({ dropOffPointId }),
   setPassengerCount: (passengerCount) => set({ passengerCount }),
-  setSelectedTrip: (selectedTrip) => set({ selectedTrip, selectedSeats: [], passengers: [], mealAddons: [], promoCode: '', discount: 0 }),
+  setSelectedTrip: (selectedTrip) => set({ selectedTrip, selectedSeats: [], passengers: [], mealAddons: [], discount: 0 }),
   setSelectedSeats: (selectedSeats) => set({ selectedSeats, passengers: [], mealAddons: [] }),
   setPassengers: (passengers) => set({ passengers }),
   setMealAddons: (mealAddons) => set({ mealAddons }),

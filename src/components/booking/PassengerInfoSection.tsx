@@ -92,6 +92,11 @@ const PassengerInfoSection = ({ onContinue }: PassengerInfoSectionProps) => {
   ];
 
   useEffect(() => {
+    setPromoInput(store.promoCode);
+    setPromoApplied(store.discount > 0);
+  }, [store.promoCode, store.discount]);
+
+  useEffect(() => {
     const user = localStorage.getItem("user");
     const getpoints = async () => {
         const userpoint = await userPoints(); 

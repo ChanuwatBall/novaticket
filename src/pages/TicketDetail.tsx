@@ -1,11 +1,11 @@
-import { useParams, Link, useNavigate } from "react-router-dom";
+import { useParams, Link, useNavigate, useSearchParams } from "react-router-dom";
 import BookingLayout from "@/components/BookingLayout";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { QrCode, MapPin, Clock, Bus, User, CreditCard, ArrowLeft, Download, Mail, Phone, IdCard, AlertCircle, Check as CheckIcon, Navigation } from "lucide-react";
+import { QrCode, MapPin, Clock, Bus, User, CreditCard, ArrowLeft, Download, Mail, Phone, IdCard, AlertCircle, Check as CheckIcon, Navigation, ShoppingBag } from "lucide-react";
 import { useBookingStore } from "@/store/bookingStore";
 import { useEffect, useState } from "react";
 import { bookingDetail, cancelBooking, cancelCharge, checkinSelf, getProvinces, getTripDetail, searchTrips } from "@/services/api";
@@ -14,6 +14,8 @@ import moment from "moment";
 import { useToast } from "@/components/ui/use-toast";
 import "../css/TicketDetail.css"
 import { t } from "i18next";
+import liff from "@line/liff";
+import { calculatePaymentSummary } from "@/lib/paymentSummary";
 
 const statusConfig: Record<string, { label: string, variant: "default" | "success" | "destructive" | "outline" | "secondary" }> = {
   pending: { label:  "รอชำระเงิน", variant: "secondary" },
@@ -60,9 +62,35 @@ const passengerTypeLabels: Record<string, string> = {
   monk: "พระสงฆ์",
 };
 
+type TicketAddOn = {
+  name?: string;
+  nameEn?: string;
+  category?: string;
+  qty?: number;
+  unitPrice?: number;
+  lineTotal?: number;
+};
+
+const formatCurrency = (amount: unknown) =>
+  Number(amount || 0).toLocaleString(undefined, {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
+
+const getStoredCompany = () => {
+  try {
+    const companyStr = localStorage.getItem("company");
+    return companyStr ? JSON.parse(companyStr) : null;
+  } catch (error) {
+    console.error("Failed to parse company from localStorage:", error);
+    return null;
+  }
+};
+
 const TicketDetail = () => {
   const { toast } = useToast();
   const { ticketId } = useParams<{ ticketId: string }>();
+  const [searchParams] = useSearchParams();
   const navigate = useNavigate()
   const store = useBookingStore();
   const [ticket, setTicket] = useState(null)
@@ -140,12 +168,15 @@ const TicketDetail = () => {
     }
   }, [ticket?.paymentStatus, ticket?.expiresAt, ticketId]);
 
+  const returnTab = searchParams.get("tab");
+  const myTicketsPath = returnTab ? `/my-tickets?tab=${encodeURIComponent(returnTab)}` : "/my-tickets";
+
   if (!ticket) {
     return (
       <BookingLayout showSteps={false} title="รายละเอียดตั๋ว">
         <div className="px-4 py-12 text-center">
           <p className="text-muted-foreground">ไม่พบข้อมูลตั๋ว</p>
-          <Link to="/my-tickets" className="text-primary font-medium mt-2 inline-block">กลับหน้าตั๋วของฉัน</Link>
+          <Link to={myTicketsPath} className="text-primary font-medium mt-2 inline-block">กลับหน้าตั๋วของฉัน</Link>
         </div>
       </BookingLayout>
     );
@@ -153,6 +184,9 @@ const TicketDetail = () => {
 
   const statusInfo = getTicketStatus(ticket);
   const isTripEnded = hasTripEnded(ticket);
+  const addOns: TicketAddOn[] = Array.isArray(ticket?.addOns) ? ticket.addOns : [];
+  const paymentSummary = calculatePaymentSummary(ticket, getStoredCompany());
+  const netTotal = paymentSummary.total + paymentSummary.feeTotal;
 
   const handleContinuePayment = async () => {
     const trip = await findTripForTicket(ticket)
@@ -289,7 +323,15 @@ const TicketDetail = () => {
 
   const handleDownloadTicket = () => {
     if (!ticket?.id) return;
-    navigate(`/e-ticket/${ticket.id}/pdf`);
+  
+    if(!liff.isInClient()) {
+      liff.openWindow({
+        url: `${window.location.origin}/e-ticket/${ticket.id}/pdf`,
+        external: true
+      });
+    }else{ 
+      navigate(`/e-ticket/${ticket.id}/pdf`);
+    }
   };
 
   return (
@@ -423,6 +465,41 @@ const TicketDetail = () => {
           </CardContent>
         </Card>
 
+        {/* Add-ons */}
+        {addOns.length > 0 && (
+          <Card className={`${ticket.status}`}>
+            <CardContent className="p-4 space-y-3">
+              <h3 className="font-bold text-base flex items-center gap-2">
+                <ShoppingBag className="h-4 w-4 text-primary" />
+                {t("Add-ons")}
+              </h3>
+              <div className="space-y-2">
+                {addOns.map((addOn, i) => (
+                  <div
+                    key={`${addOn.name || addOn.nameEn || "add-on"}-${i}`}
+                    className="grid grid-cols-[minmax(0,1fr)_auto_auto] items-center gap-2 rounded-lg bg-muted/50 p-3 text-sm"
+                  >
+                    <div className="flex min-w-0 items-center gap-2">
+                      <span className="truncate  ">{t(addOn.name || addOn.nameEn || "-")} <br/> <small>  {Number(addOn.qty || 0).toLocaleString()}x{formatCurrency(addOn.unitPrice)} </small> </span>
+                      {/* {addOn.category && (
+                        <Badge variant="outline" className="shrink-0 text-xs">
+                          {t(addOn.category)}
+                        </Badge>
+                      )} */}
+                    </div>
+                    {/* <span className="whitespace-nowrap text-xs text-muted-foreground">
+                      x {formatCurrency(addOn.unitPrice)}
+                    </span> */}
+                    <span className="whitespace-nowrap text-right font-semibold text-primary">
+                      {formatCurrency(addOn.lineTotal)}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
         {/* Booking & Payment Info */}
         <Card className={`${ticket.status}`}>
           <CardContent className="p-4 space-y-3">
@@ -432,26 +509,32 @@ const TicketDetail = () => {
             </h3>
             <div className="grid grid-cols-2 gap-y-2 text-sm">
               <span className="text-muted-foreground">{t("วันที่จอง")}</span>
-              <span className="text-right font-medium">{ticket.bookingDate ? moment(ticket.bookingDate).format("DD MMM YYYY HH:mm") : "-"}</span>
+              <span className="text-right font-medium">{ticket.bookingDate ? moment(ticket.bookingDate).local().format("DD MMM YYYY HH:mm") : "-"}</span>
               <span className="text-muted-foreground">{t("ช่องทางชำระ")}</span>
-              <span className="text-right font-medium">{ticket.paymentMethod}</span>
-              <span className="text-muted-foreground">{t("ราคา/ที่นั่ง")}</span>
-              <span className="text-right font-medium">฿{ticket.pricePerSeat?.toLocaleString()}</span>
+              <span className="text-right font-medium">{ticket?.paymentMethod?.toUpperCase()}</span>
+              {/* <span className="text-muted-foreground">{t("ราคา/ที่นั่ง")}</span>
+              <span className="text-right font-medium">฿{ticket.pricePerSeat?.toLocaleString()}</span> */}
               <span className="text-muted-foreground">{t("จำนวนที่นั่ง")}</span>
               <span className="text-right font-medium">{ticket.seats.length}</span>
               {ticket.promoCode && (
                 <>
                   <span className="text-muted-foreground">{t("โค้ดส่วนลด")}</span>
                   <span className="text-right font-medium text-success">{ticket.promoCode}</span>
-                  <span className="text-muted-foreground">{t("ส่วนลด")}</span>
-                  <span className="text-right font-medium text-success">-฿{ticket.discount}</span>
                 </>
               )}
+              {paymentSummary.discount > 0 && (
+                <>
+                  <span className="text-muted-foreground">{t("ส่วนลด")}</span>
+                  <span className="text-right font-medium text-success">-฿{paymentSummary.discount.toLocaleString()}</span>
+                </>
+              )}
+              <span className="text-muted-foreground">{t("ค่าธรรมเนียม")}</span>
+              <span className="text-right font-medium">฿{paymentSummary.feeTotal.toLocaleString()}</span>
             </div>
             <Separator />
             <div className="flex justify-between font-bold text-lg">
-              <span>{t("ยอดชำระ")}</span>
-              <span className="text-primary">฿{ticket.total.toLocaleString()}</span>
+              <span>{t("ยอดสุทธิ")}</span>
+              <span className="text-primary">฿{netTotal.toLocaleString()}</span>
             </div>
           </CardContent>
         </Card>
@@ -499,7 +582,7 @@ const TicketDetail = () => {
           </div>
         )}
 
-        <Link to="/my-tickets" >
+        <Link to={myTicketsPath} >
           <Button variant="outline" className="w-full h-11 bg-grey-400 mt-4">
             <ArrowLeft className="mr-2 h-4 w-4" />
             {t("กลับหน้าตั๋วของฉัน")}

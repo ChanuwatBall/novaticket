@@ -10,11 +10,13 @@ import { Tag, Clock, Copy, CheckCircle } from "lucide-react";
 import { toast } from "sonner";
 import { getPromotionDetail } from "@/services/api";
 import { t } from "i18next";
+import { useBookingStore } from "@/store/bookingStore";
 
 
 const PromotionDetail = () => {
   const { promoId } = useParams<{ promoId: string }>();
   const [promo, setPromo] = useState<any>(null)
+  const store = useBookingStore();
   // const promo = promoId ? mockPromotions.find((p) => p.id === promoId) : null;
   const navigate = useNavigate();
 
@@ -75,7 +77,11 @@ const PromotionDetail = () => {
 
             <Button
               className="w-full h-12 font-bold"
-              onClick={() => navigate("/")}
+              onClick={() => {
+                store.setPromoCode(promo.promoCode);
+                store.setDiscount(0);
+                navigate("/");
+              }}
             >
               {t("ใช้โค้ดนี้จองตั๋ว")}
             </Button>
