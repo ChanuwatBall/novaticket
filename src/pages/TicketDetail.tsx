@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { QrCode, MapPin, Clock, Bus, User, CreditCard, ArrowLeft, Download, Mail, Phone, IdCard, AlertCircle, Check as CheckIcon, Navigation, ShoppingBag } from "lucide-react";
+import { QrCode, MapPin, Clock, Bus, User, CreditCard, ArrowLeft, Download, Mail, Phone, IdCard, AlertCircle, Check as CheckIcon, Navigation, ShoppingBag, Loader2 } from "lucide-react";
 import { useBookingStore } from "@/store/bookingStore";
 import { useEffect, useState } from "react";
 import { bookingDetail, cancelBooking, cancelCharge, checkinSelf, getProvinces, getTripDetail, searchTrips } from "@/services/api";
@@ -16,6 +16,7 @@ import "../css/TicketDetail.css"
 import { t } from "i18next";
 import liff from "@line/liff";
 import { calculatePaymentSummary } from "@/lib/paymentSummary";
+import { encodeTicketPayload } from "@/lib/ticketPdf";
 
 const statusConfig: Record<string, { label: string, variant: "default" | "success" | "destructive" | "outline" | "secondary" }> = {
   pending: { label:  "รอชำระเงิน", variant: "secondary" },
@@ -96,6 +97,7 @@ const TicketDetail = () => {
   const [ticket, setTicket] = useState(null)
   const [qr, setQr] = useState("")
   const [isCheckinLoading, setIsCheckinLoading] = useState(false)
+  const [isPdfLoading, setIsPdfLoading] = useState(false)
   const [route, setRoute] = useState<any>(null)
   const [provinces, setProvinces] = useState<any[]>([])
 
@@ -322,15 +324,36 @@ const TicketDetail = () => {
   };
 
   const handleDownloadTicket = () => {
-    if (!ticket?.id) return;
-  
-    if(!liff.isInClient()) {
-      liff.openWindow({
-        url: `${window.location.origin}/e-ticket/${ticket.bookingReference}/pdf?openExternalBrowser=1`,
-        external: true
+    if (!ticket?.bookingReference) return;
+
+    setIsPdfLoading(true);
+    try {
+      const payload = encodeTicketPayload({ booking: ticket, qrCode: qr || null });
+      const downloadUrl = new URL(`/e-ticket/${ticket.bookingReference}/pdf?openExternalBrowser=1`, window.location.origin);
+      downloadUrl.searchParams.set("payload", payload);
+
+      if (liff.isInClient?.()) {
+        liff.openWindow({
+          url: downloadUrl.toString(),
+          external: true,
+        });
+      } else {
+        window.open(downloadUrl.toString(), "_blank", "noopener,noreferrer");
+      }
+
+      toast({
+        title: t("กำลังเปิดเบราว์เซอร์"),
+        description: t("ระบบจะสร้างและดาวน์โหลด PDF ในเบราว์เซอร์ภายนอก"),
       });
-    }else{ 
-      navigate(`/e-ticket/${ticket.bookingReference}/pdf`);
+    } catch (error) {
+      console.error("Error opening ticket PDF download page:", error);
+      toast({
+        title: t("เกิดข้อผิดพลาด"),
+        description: t("ไม่สามารถเปิดหน้าดาวน์โหลด PDF ได้"),
+        variant: "destructive",
+      });
+    } finally {
+      setIsPdfLoading(false);
     }
   };
 
@@ -573,11 +596,12 @@ const TicketDetail = () => {
 
             <Button
               onClick={handleDownloadTicket}
+              disabled={isPdfLoading}
               variant="outline"
               className="w-full h-14 font-bold text-lg shadow-sm"
             >
-              <Download className="mr-2 h-6 w-6" />
-              {t("ดาวน์โหลดตั๋ว")}
+              {isPdfLoading ? <Loader2 className="mr-2 h-6 w-6 animate-spin" /> : <Download className="mr-2 h-6 w-6" />}
+              {isPdfLoading ? t("กำลังเปิด PDF...") : t("ดาวน์โหลดตั๋ว")}
             </Button>
           </div>
         )}
