@@ -17,6 +17,7 @@ import { t } from "i18next";
 import liff from "@line/liff";
 import { calculatePaymentSummary } from "@/lib/paymentSummary";
 import { encodeTicketPayload } from "@/lib/ticketPdf";
+import { getStoredCompany } from "@/lib/company";
 
 const statusConfig: Record<string, { label: string, variant: "default" | "success" | "destructive" | "outline" | "secondary" }> = {
   pending: { label:  "รอชำระเงิน", variant: "secondary" },
@@ -77,16 +78,6 @@ const formatCurrency = (amount: unknown) =>
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   });
-
-const getStoredCompany = () => {
-  try {
-    const companyStr = localStorage.getItem("company");
-    return companyStr ? JSON.parse(companyStr) : null;
-  } catch (error) {
-    console.error("Failed to parse company from localStorage:", error);
-    return null;
-  }
-};
 
 const TicketDetail = () => {
   const { toast } = useToast();
@@ -328,7 +319,7 @@ const TicketDetail = () => {
 
     setIsPdfLoading(true);
     try {
-      const payload = encodeTicketPayload({ booking: ticket, qrCode: qr || null });
+      const payload = encodeTicketPayload({ booking: ticket, qrCode: qr || null, company: getStoredCompany() });
       const downloadUrl = new URL(`/e-ticket/${ticket.bookingReference}/pdf?openExternalBrowser=1`, window.location.origin);
       downloadUrl.searchParams.set("payload", payload);
 

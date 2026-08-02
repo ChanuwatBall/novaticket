@@ -1,5 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { bookingDetail } from "@/services/api";
+import { getStoredCompany, loadCompany, storeCompany } from "@/lib/company";
 import { createTicketPdf, decodeTicketPayload } from "@/lib/ticketPdf";
 import { Loader2, Download, AlertCircle } from "lucide-react";
 import QRCode from "qrcode";
@@ -17,16 +18,6 @@ const createBookingQr = async (booking: any) => {
   return QRCode.toDataURL(btoa(qrBookingPayload));
 };
 
-const getStoredCompany = () => {
-  try {
-    const companyStr = localStorage.getItem("company");
-    return companyStr ? JSON.parse(companyStr) : null;
-  } catch (error) {
-    console.error("Failed to parse company from localStorage:", error);
-    return null;
-  }
-};
-
 const ETicketPdfDownload = () => {
   const { bookingref } = useParams<{ bookingref: string }>();
   const [searchParams] = useSearchParams();
@@ -34,6 +25,7 @@ const ETicketPdfDownload = () => {
   const [message, setMessage] = useState("กำลังสร้าง PDF...");
   const [booking, setBooking] = useState<any>(null);
   const [qrCode, setQrCode] = useState<string | null>(null);
+  const [company, setCompany] = useState<unknown>(null);
   const [hasDownloaded, setHasDownloaded] = useState(false);
   const didStartAutoDownload = useRef(false);
 
@@ -41,10 +33,15 @@ const ETicketPdfDownload = () => {
     const payload = searchParams.get("payload");
 
     if (payload) {
-      const decoded = decodeTicketPayload<{ booking: any; qrCode: string | null }>(payload);
+      const decoded = decodeTicketPayload<{ booking: any; qrCode: string | null; company?: unknown }>(payload);
+      if (decoded.company) {
+        storeCompany(decoded.company);
+      }
+
       return {
         booking: decoded.booking,
         qrCode: decoded.qrCode || await createBookingQr(decoded.booking),
+        company: decoded.company || await loadCompany(),
       };
     }
 
@@ -62,20 +59,21 @@ const ETicketPdfDownload = () => {
     return {
       booking: detail,
       qrCode: await createBookingQr(detail),
+      company: await loadCompany(),
     };
   }, [bookingref, searchParams]);
 
-  const downloadPdf = useCallback(async (targetBooking = booking, targetQrCode = qrCode) => {
+  const downloadPdf = useCallback(async (targetBooking = booking, targetQrCode = qrCode, targetCompany = company) => {
     if (!targetBooking) return;
 
     setStatus("loading");
     setMessage("กำลังสร้าง PDF...");
-    const pdf = await createTicketPdf(targetBooking, targetQrCode, getStoredCompany());
+    const pdf = await createTicketPdf(targetBooking, targetQrCode, targetCompany || getStoredCompany() || await loadCompany());
     pdf.save(`e-ticket-${targetBooking.bookingReference || bookingref}.pdf`); 
     setHasDownloaded(true);
     setStatus("ready");
     setMessage("ดาวน์โหลด PDF เรียบร้อยแล้ว");
-  }, [booking, bookingref, qrCode]);
+  }, [booking, bookingref, company, qrCode]);
 
   useEffect(() => {
     let cancelled = false;
@@ -89,7 +87,8 @@ const ETicketPdfDownload = () => {
 
         setBooking(data.booking);
         setQrCode(data.qrCode);
-        await downloadPdf(data.booking, data.qrCode);
+        setCompany(data.company);
+        await downloadPdf(data.booking, data.qrCode, data.company);
       } catch (error: any) {
         if (cancelled) return;
         console.error("Ticket PDF download error:", error);

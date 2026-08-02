@@ -34,17 +34,37 @@ const compactJoin = (items: unknown[], separator = " | ") =>
     .filter(Boolean)
     .join(separator);
 
-const getCompanyProfile = (company: any) => ({
-  name: company?.name || COMPANY_PROFILE.name,
-  address: company?.address || COMPANY_PROFILE.address,
-  contactName: company?.contact_name || COMPANY_PROFILE.contactName,
-  phone: company?.phone || COMPANY_PROFILE.phone,
-  email: company?.email || COMPANY_PROFILE.email,
-  taxId: company?.tax_id || COMPANY_PROFILE.taxId,
-  ticketTerms: company?.ticket_terms || COMPANY_PROFILE.ticketTerms,
-  fee: (Array.isArray(company?.company_sales_settings) ? company.company_sales_settings[0] : company?.company_sales_settings)?.fee,
-  vipSeatSurcharge: (Array.isArray(company?.company_sales_settings) ? company.company_sales_settings[0] : company?.company_sales_settings)?.vip_seat_surcharge,
-});
+const firstValue = (...values: unknown[]) =>
+  values.find((value) => value !== undefined && value !== null && value !== "");
+
+const asRecord = (value: unknown) =>
+  typeof value === "object" && value !== null ? value as Record<string, unknown> : null;
+
+const getCompanySalesSettings = (company: unknown) => {
+  const companyData = asRecord(company);
+  const settings = companyData?.company_sales_settings || companyData?.companySalesSettings;
+  return asRecord(Array.isArray(settings) ? settings[0] : settings);
+};
+
+const getCompanyProfile = (company: unknown) => {
+  const companyData = asRecord(company);
+  const salesSettings = getCompanySalesSettings(company);
+
+  return {
+    name: firstValue(companyData?.name, companyData?.companyName, COMPANY_PROFILE.name),
+    address: firstValue(companyData?.address, companyData?.companyAddress, COMPANY_PROFILE.address),
+    contactName: firstValue(companyData?.contact_name, companyData?.contactName, COMPANY_PROFILE.contactName),
+    phone: firstValue(companyData?.phone, companyData?.tel, companyData?.telephone, COMPANY_PROFILE.phone),
+    email: firstValue(companyData?.email, COMPANY_PROFILE.email),
+    taxId: firstValue(companyData?.tax_id, companyData?.taxId, COMPANY_PROFILE.taxId),
+    ticketTerms: firstValue(companyData?.ticket_terms, companyData?.ticketTerms, COMPANY_PROFILE.ticketTerms),
+    fee: salesSettings?.fee,
+    vipSeatSurcharge: firstValue(
+      salesSettings?.vip_seat_surcharge,
+      salesSettings?.vipSeatSurcharge,
+    ),
+  };
+};
 
 export const createTicketPdf = async (booking: any, qrCode: string | null, company?: any) => {
   const companyProfile = getCompanyProfile(company);

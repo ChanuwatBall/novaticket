@@ -12,16 +12,7 @@ import liff from "@line/liff";
 import { useToast } from "@/hooks/use-toast";
 import { encodeTicketPayload } from "@/lib/ticketPdf";
 import { calculatePaymentSummary } from "@/lib/paymentSummary";
-
-const getStoredCompany = () => {
-  try {
-    const companyStr = localStorage.getItem("company");
-    return companyStr ? JSON.parse(companyStr) : null;
-  } catch (error) {
-    console.error("Failed to parse company from localStorage:", error);
-    return null;
-  }
-};
+import { getStoredCompany } from "@/lib/company";
 
 const ETicketPage = () => {
   const { toast } = useToast();
@@ -83,7 +74,7 @@ const ETicketPage = () => {
 
     setIsPdfLoading(true);
     try {
-      const payload = encodeTicketPayload({ booking, qrCode });
+      const payload = encodeTicketPayload({ booking, qrCode, company: getStoredCompany() });
       const downloadUrl = new URL(`/e-ticket/${booking.bookingReference || bookingref}/pdf?openExternalBrowser=1`, window.location.origin);
       downloadUrl.searchParams.set("payload", payload);
 
