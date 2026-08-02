@@ -229,7 +229,7 @@ const PaymentQRPage = () => {
   const handleDownloadQR = useCallback(async () => {
     if (!qrUrl) return;
     if (liff.isInClient && liff.isInClient()) {
-      liff.openWindow({ url: qrUrl, external: true });
+      liff.openWindow({ url: qrUrl+'?openExternalBrowser=1', external: true });
     } else {
       try {
         const response = await fetch(qrUrl);

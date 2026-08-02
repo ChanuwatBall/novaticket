@@ -326,7 +326,7 @@ const TicketDetail = () => {
   
     if(!liff.isInClient()) {
       liff.openWindow({
-        url: `${window.location.origin}/e-ticket/${ticket.id}/pdf`,
+        url: `${window.location.origin}/e-ticket/${ticket.id}/pdf?openExternalBrowser=1`,
         external: true
       });
     }else{ 

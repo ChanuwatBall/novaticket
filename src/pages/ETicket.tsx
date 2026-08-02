@@ -84,7 +84,7 @@ const ETicketPage = () => {
     setIsPdfLoading(true);
     try {
       const payload = encodeTicketPayload({ booking, qrCode });
-      const downloadUrl = new URL(`/e-ticket/${booking.bookingReference || bookingref}/pdf`, window.location.origin);
+      const downloadUrl = new URL(`/e-ticket/${booking.bookingReference || bookingref}/pdf?openExternalBrowser=1`, window.location.origin);
       downloadUrl.searchParams.set("payload", payload);
 
       if (liff.isInClient?.()) {
