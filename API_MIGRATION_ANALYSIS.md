@@ -1,6 +1,8 @@
-# API Migration Analysis: `go-glee` → `nova-express-1/api`
+# API Migration Analysis: `nova-ticket` → `nova-express-1/api`
 
-เอกสารนี้เป็นผลการตรวจสอบแบบ read-only ของ API ที่แอป `go-glee` ใช้อยู่ในปัจจุบัน เทียบกับ endpoint ที่มีอยู่ใน `nova-express-1/api`
+เอกสารนี้เป็นผลการตรวจสอบแบบ read-only ของ API ที่แอป `nova-ticket` ใช้อยู่ในปัจจุบัน เทียบกับ endpoint ที่มีอยู่ใน `nova-express-1/api`
+
+**ขอบเขต:** ระบบปลายทางมีเฉพาะลูกค้าที่สมัคร/ล็อกอินเอง ค้นหาเที่ยวรถ เลือกที่นั่ง จอง และชำระเงินเอง ไม่มี flow พนักงานขาย ไม่มี counter sale และไม่มีบัญชีผู้ดูแลใน customer API
 
 ขอบเขตของเอกสาร:
 
@@ -12,24 +14,25 @@
 
 ## 1. สรุปผลสำหรับการตัดสินใจ
 
-ไม่ควรเปลี่ยน base URL ของแอปไปยัง `nova-express-1/api` แล้วใช้ path เดิมทั้งหมด เพราะระบบทั้งสองมีคนละบริบท:
+ไม่ควรเปลี่ยน base URL ของแอปไปยัง `nova-express-1/api` แล้วใช้ path เดิมทั้งหมด เพราะ path, schema และ response ยังไม่ตรงกับ customer flow:
 
-| หัวข้อ | `go-glee` ปัจจุบัน | `nova-express-1/api` ปัจจุบัน |
+| หัวข้อ | `nova-ticket` ปัจจุบัน | `nova-express-1/api` ตาม scope นี้ |
 |---|---|---|
-| กลุ่มผู้ใช้ | ผู้โดยสาร/สมาชิก | พนักงานขายและผู้ดูแลระบบ |
+| กลุ่มผู้ใช้ | ลูกค้า/ผู้โดยสารที่จองเอง | ลูกค้า/ผู้โดยสารที่จองเอง |
 | Base path | `/api/...` | `/api/v1/...` |
-| Authentication | email/password, LINE, refresh token | username/password และ session ของพนักงาน |
+| Authentication | email/password, LINE, refresh token | customer email/password, LINE และ refresh token |
 | รูปแบบข้อมูล | object/array ตรง ๆ เป็นส่วนใหญ่ | `{ data, meta }` เป็นส่วนใหญ่ |
 | Pagination | `page`, `limit` | `offset`, `limit` |
-| Booking | จองออนไลน์โดยผู้โดยสาร | ขายตั๋วที่ counter/สาขา |
-| Payment | QR, Alipay, WeChat และสถานะ payment | `POST /bookings` รองรับ `cash` เท่านั้น |
+| Booking | จองออนไลน์โดยลูกค้า | จองออนไลน์โดยลูกค้า |
+| Payment | QR, Alipay, WeChat และสถานะ payment | endpoint ที่ตรวจพบมี `POST /bookings` เป็น cash flow จึงต้องเพิ่ม online payment |
 | Database access | มีการ query Supabase จาก browser โดยตรง | API query PostgreSQL จาก server |
 
 ข้อสรุปคือควรใช้สองชั้นร่วมกัน:
 
 1. Reuse query และ business logic ที่เหมาะสมจาก API ใหม่ เช่น routes, route stops, trips, seat layout, fares และ products
-2. เพิ่ม customer-facing API namespace เช่น `/api/v1/customer/...` สำหรับแอปผู้โดยสาร
-3. ย้าย Supabase access ทั้งหมดไปอยู่หลัง API ก่อนถอด Supabase client ออกจาก frontend
+2. ทำให้ทุก endpoint เป็น customer-facing และใช้ customer token/ownership เดียวกัน
+3. เพิ่ม endpoint ที่ขาด เช่น register, LINE login, online payment, promotions, points, wallet และ tracking
+4. ย้าย Supabase access ทั้งหมดไปอยู่หลัง API ก่อนถอด Supabase client ออกจาก frontend
 
 ## 2. สถานะการรองรับ
 
@@ -46,12 +49,12 @@
 
 | Path เดิม | Method | Request | Response ที่ frontend คาดหวัง | สถานะกับ API ใหม่ |
 |---|---|---|---|---|
-| `/api/auth/login` | POST | `{ email, password }` | `{ token, refresh_token?, user? }` | **ต้องเขียนใหม่สำหรับ customer**; `/api/v1/auth/login` รับ `username` และเป็นพนักงาน |
+| `/api/auth/login` | POST | `{ email, password }` | `{ token, refresh_token?, user? }` | **ต้องปรับเป็น customer login**; request ใหม่ยังคงใช้ email/password |
 | `/api/auth/register` | POST | `{ fullName, phone, email, password }` | token + user | **ต้องเขียนใหม่** |
 | `/api/auth/line` | POST | `{ lineAccessToken }` | token + user | **ต้องเขียนใหม่** |
 | `/api/auth/refresh` | POST | `{ refresh_token }` | token ชุดใหม่ | **ต้องเขียนใหม่** |
-| `/api/auth/logout` | POST | `refresh_token` + Bearer | success | **ใช้ได้หลังปรับ**; API ใหม่มี `/api/v1/auth/logout` แต่ใช้ employee session |
-| `/api/users/me` | GET | Bearer | passenger profile | **ไม่ควรใช้แทน**; `/api/v1/auth/me` คืน employee/group/permission |
+| `/api/auth/logout` | POST | `refresh_token` + Bearer | success | **ใช้ได้หลังปรับ**; ต้องลบ customer session |
+| `/api/users/me` | GET | Bearer | passenger profile | **ต้องเพิ่ม customer profile endpoint** |
 | `/api/users/me` | PATCH | profile fields | passenger profile | **ต้องเขียนใหม่** |
 
 ### 3.2 เส้นทาง จังหวัด จุดขึ้นลง และเที่ยวรถ
@@ -71,7 +74,7 @@
 
 | Path เดิม | Method | Request | Response | สถานะ |
 |---|---|---|---|---|
-| `/api/bookings` | POST | trip/date/stations/passengers/promo/add-ons/payment | booking id/status/total | **ใช้ได้หลังปรับมาก** จาก `/api/v1/bookings`; API ใหม่เป็น counter sale และรับ cash เท่านั้น |
+| `/api/bookings` | POST | trip/date/stations/passengers/promo/add-ons/payment | booking id/status/total | **ใช้ได้หลังปรับมาก** จาก `/api/v1/bookings`; ต้องตัด cash/branch semantics และรองรับ customer payment |
 | `/api/bookings` | GET | `page`, `limit` + Bearer | bookings ของผู้ใช้ | **ต้องเขียน customer variant**; API ใหม่ list bookings ตามบริษัท/สาขา |
 | `/api/bookings/:id` | GET | id + Bearer | booking/ticket detail | **ใช้ได้หลังปรับ** จาก `/api/v1/bookings/:id/ticket` แต่ต้องตรวจ owner/customer |
 | `/api/bookings/:id/cancel` | PATCH | body ว่าง | success/message | **ต้องเขียนใหม่หรือเพิ่ม customer refund/cancel policy**; API ใหม่ใช้ refund flow |
@@ -109,36 +112,57 @@ API ใหม่มี payment semantics เป็นเงินสดใน `P
 
 ### 4.1 ใช้เป็นฐานได้ทันที
 
-รายการนี้มี handler และ OpenAPI อยู่แล้ว แต่คำว่า “ใช้ได้ทันที” หมายถึงใช้เป็น backend building block; ยังไม่ควร expose ให้ passenger โดยตรงจนเพิ่ม customer authorization และ response contract:
+รายการนี้มี handler และ OpenAPI อยู่แล้ว และสามารถนำมาเป็น backend building block ของ customer API ได้ โดยต้องตรวจ customer authorization และ response contract ให้ตรงกับแอป:
 
 | Endpoint ใหม่ | Method | Request/Query | Response หลัก | ใช้กับของเดิม |
 |---|---|---|---|---|
-| `/api/v1/auth/login` | POST | `{username,password}` | `{data: auth}` | employee login เท่านั้น |
-| `/api/v1/auth/me` | GET | Bearer | `{data: user, group, permissions}` | ไม่แทน passenger profile |
-| `/api/v1/auth/logout` | POST | Bearer | `{data:{loggedOut:true}}` | ใช้กับ employee session |
+| `/api/v1/auth/login` | POST | `{username,password}` ในโค้ดปัจจุบัน | `{data: auth}` | ต้องเปลี่ยน request เป็น customer `{email,password}` |
+| `/api/v1/auth/me` | GET | Bearer | `{data: user, group, permissions}` ในโค้ดปัจจุบัน | ต้องปรับ response เป็น customer profile |
+| `/api/v1/auth/logout` | POST | Bearer | `{data:{loggedOut:true}}` | ใช้เป็นฐาน customer logout ได้หลังเปลี่ยน session model |
 | `/api/v1/routes` | GET | `limit`, `offset` | `{data:[routes],meta}` | route catalog |
 | `/api/v1/route-stops` | GET | `routeId`, `limit`, `offset` | `{data:[stops],meta}` | bus stops |
-| `/api/v1/trips` | GET | `serviceDate?`, `limit`, `offset` | `{data:[trips],meta}` | admin trip list |
+| `/api/v1/trips` | GET | `serviceDate?`, `limit`, `offset` | `{data:[trips],meta}` | ใช้เป็น source ภายในสำหรับ customer trip search |
 | `/api/v1/sale-trips` | GET | `serviceDate` | `{data:{trips,availableDates,settings}}` | customer trip source candidate |
 | `/api/v1/sale-trips/:id` | GET | trip id | `{data:{trip,stops,passengerTypes,fares,occupiedSeats,blockedSeats}}` | trip detail + seats |
 | `/api/v1/stations` | GET | `limit`, `offset` | `{data:[stations],meta}` | boarding/drop-off source |
 | `/api/v1/passenger-types` | GET | `limit`, `offset` | `{data:[passengerTypes],meta}` | passenger type selector |
 | `/api/v1/products` | GET | filters, `limit`, `offset` | `{data:[products],meta}` | add-ons candidate |
-| `/api/v1/bookings` | POST | `BookingInput` | `{data: booking}`, status 201 | counter booking core |
-| `/api/v1/bookings` | GET | `limit`, `offset` | `{data:[bookings],meta}` | admin booking list |
+| `/api/v1/bookings` | POST | `BookingInput` | `{data: booking}`, status 201 | ต้องปรับเป็น customer booking โดยไม่บังคับ branch/cash |
+| `/api/v1/bookings` | GET | `limit`, `offset` | `{data:[bookings],meta}` | ต้อง filter ด้วย customer token |
 | `/api/v1/bookings/:id/ticket` | GET | booking id | `{data: printable ticket}` | ticket data candidate |
 | `/api/v1/bookings/:id/refund` | POST | refund request | `{data: refund}`, status 201 | refund base |
-| `/api/v1/refunds` | GET | `limit`, `offset` | `{data:[refunds],meta}` | admin refund list |
+| `/api/v1/refunds` | GET | `limit`, `offset` | `{data:[refunds],meta}` | customer ต้องเห็นเฉพาะ refund ของตนเอง หรือใช้ใน booking detail |
 
-### 4.2 ต้องปรับก่อนนำมาใช้กับ `go-glee`
+### 4.2 ต้องปรับก่อนนำมาใช้กับ `nova-ticket`
 
-1. **Authentication** — แยก customer token/session จาก employee `users` และ `auth_sessions`
-2. **Authorization** — customer เห็นเฉพาะ booking ของตนเอง; employee permission/menu access ไม่เหมาะกับ mobile passenger
+1. **Authentication** — ใช้ customer account/session สำหรับ email, LINE และ refresh token
+2. **Authorization** — customer เห็นเฉพาะ booking ของตนเองผ่าน `customerId` จาก token
 3. **Response adapter** — แปลง `{data,meta}` เป็นรูปแบบที่ `src/services/api.ts` และหน้าจอเดิมคาดหวัง หรือแก้ client ให้ใช้ contract ใหม่ทั้งชุด
 4. **Field mapping** — API ใหม่ใช้ UUID, station fields และ snake_case หลายจุด; frontend เดิมใช้ province/route fields แบบเดิมและบางส่วนเป็น camelCase
 5. **Pagination** — แปลง `page` เป็น `offset = (page - 1) * limit`
-6. **Company/branch scope** — customer booking ไม่ควรถูกบังคับให้เลือก `branchId` แบบ counter sale
+6. **Customer scope** — customer booking ไม่ต้องส่ง `branchId` หรือข้อมูลพนักงาน
 7. **Payment** — ต้องแยก online payment ก่อน reuse booking transaction
+
+### 4.3 คำตอบแบบชัดเจนว่า “ใช้ได้เลย” หรือ “ต้องเพิ่ม”
+
+| Resource ใน new endpoint | ใช้ได้เลยหรือไม่ | งานที่ต้องเพิ่มก่อนให้ `nova-ticket` เรียก |
+|---|---|---|
+| `GET /api/v1/routes` | **ใช้ได้เลยในด้านข้อมูล** | client unwrap `{data}` และกำหนด default `limit/offset`; ถ้าต้องการ public route ให้ไม่บังคับ login |
+| `GET /api/v1/route-stops` | **ใช้ได้เลยในด้านข้อมูล** | ส่ง `routeId`, map `station_id/stop_order` เป็น DTO เดิม และเพิ่ม filter จุดขึ้น/ลง |
+| `GET /api/v1/stations` | **ใช้ได้หลังปรับเล็กน้อย** | map station เป็น boarding point/province และเพิ่ม query filter |
+| `GET /api/v1/passenger-types` | **ใช้ได้หลังปรับเล็กน้อย** | map `code/name`; เพิ่ม field ที่ frontend ต้องใช้ถ้าต้องการ `requiresDocument` |
+| `GET /api/v1/sale-trips` | **ใช้ได้หลังเพิ่ม customer access** | รับ `serviceDate`, filter route/stations, ตัดข้อมูลภายใน และคืน customer DTO |
+| `GET /api/v1/sale-trips/:id` | **ใช้ได้หลังเพิ่ม customer access** | ตรวจ trip ที่เปิดขาย, map seat state, ตัดข้อมูลภายใน |
+| `GET /api/v1/products` | **ใช้ได้หลังปรับ scope** | filter เฉพาะ add-ons ที่ซื้อกับ trip/customer ได้ และ map response |
+| `POST /api/v1/bookings` | **ใช้ไม่ได้ตรง ๆ** | เปลี่ยน request เป็น customer booking, ตัด branch/cash requirement, เพิ่ม seat hold/promo/payment และ customer ownership |
+| `GET /api/v1/bookings` | **ใช้ไม่ได้ตรง ๆ** | filter ด้วย customer token, ห้ามรับ customerId จาก query และเพิ่ม status/date filters |
+| `GET /api/v1/bookings/:id/ticket` | **ใช้ได้หลังเพิ่ม ownership** | ตรวจว่า booking เป็นของ customer, map ticket response และ QR |
+| `POST /api/v1/bookings/:id/refund` | **ใช้เป็นฐาน refund ได้** | เพิ่ม customer cancel policy, ownership, payment provider refund และ response สำหรับลูกค้า |
+| `POST /api/v1/auth/login` | **ใช้ไม่ได้ตรง ๆ** | เปลี่ยนเป็น customer email/password และ customer token |
+| `GET /api/v1/auth/me` | **ใช้ไม่ได้ตรง ๆ** | เปลี่ยน DTO เป็น customer profile ไม่คืน permission/group ภายใน |
+| `POST /api/v1/auth/logout` | **ใช้เป็นฐานได้หลังปรับ session** | revoke customer refresh/access session |
+
+ดังนั้นกลุ่มที่ “ใช้ได้เลย” จริงในรอบแรกคือข้อมูล catalog ที่ไม่เกี่ยวกับเจ้าของข้อมูล ได้แก่ routes และ route stops หลังเพิ่มเพียง response adapter ส่วน authentication, booking, payment และข้อมูลส่วนตัวต้องเพิ่มเติมก่อนทั้งหมด
 
 ## 5. Endpoint ที่ต้องเขียนเพิ่ม
 
@@ -361,35 +385,485 @@ Response: `{ data: { id, status, refundId?, refundAmount? } }`
 
 ต้องตรวจ customer ownership และสถานะตั๋วทุกครั้ง ไม่ควรให้ผู้ใช้ส่ง `userId` มาเอง
 
-## 6. Supabase ที่ต้องย้ายมาเป็น API
+## 5.7 Complete customer contract: request/params/response ครบทุก path
 
-พบการอ่าน Supabase จาก browser ในกลุ่มต่อไปนี้:
+ส่วนนี้เป็น contract ที่ต้องใช้เป็นข้อกำหนดก่อนเขียน handler จริง ทุก endpoint ที่ต้องปรับหรือเขียนใหม่มี method, path parameter, query parameter, request body, success response และ error response ระบุไว้แล้ว
 
-| จุดเดิม | ตาราง/ข้อมูล | API ใหม่ที่ควรสร้าง |
-|---|---|---|
-| `src/lib/company.ts` และ `Home.tsx` | `companies`, `company_sales_settings` | `GET /api/v1/customer/config` |
-| `PassengerInfoSection.tsx` | `passenger_tiers` | รวมใน trip detail หรือ `GET /api/v1/customer/passenger-types` |
-| `Home.tsx` | `routes` | `GET /api/v1/customer/routes` |
-| `Home.tsx` | route lookup จาก `origin_id`, `destination_id` | `GET /api/v1/customer/routes/search` หรือรวมใน trip search |
-| `Home.tsx` | `bookings` ของ user ที่ยังเดินทาง | `GET /api/v1/customer/bookings?status=upcoming,confirmed&paymentStatus=paid` |
+ตารางในหัวข้อ 3 เป็น inventory ของ legacy API เพื่อบอกสิ่งที่ frontend เรียกอยู่ ส่วน request/params/response ที่ต้องใช้กับ endpoint ใหม่ให้ยึด contract ในหัวข้อนี้เป็นหลัก ไม่ใช้ shorthand ใน inventory ไปสร้าง handler โดยตรง
 
-หลักการสำคัญ:
+### รูปแบบ response และ error ร่วมกัน
 
-- browser ไม่ควรมี service-role credential หรือ query ตารางโดยตรง
-- API ต้องบังคับ row ownership และ company scope ใน server
-- ตาราง customer/account และ employee account ควรแยกสิทธิ์ชัดเจน
-- response จาก API ควรเป็น DTO ที่ไม่เปิด column ภายในโดยไม่จำเป็น
+สำเร็จแบบ object:
+
+```json
+{ "data": {} }
+```
+
+สำเร็จแบบ list:
+
+```json
+{
+  "data": [],
+  "meta": { "limit": 20, "offset": 0, "total": 0 }
+}
+```
+
+ผิดพลาดทุก endpoint:
+
+```json
+{
+  "error": {
+    "code": "VALIDATION_ERROR",
+    "message": "รายละเอียดที่อ่านได้สำหรับลูกค้า"
+  }
+}
+```
+
+สถานะที่ควรรองรับเป็นอย่างน้อย: `400` ข้อมูลไม่ถูกต้อง, `401` ไม่ได้ล็อกอิน/Token หมดอายุ, `403` ไม่มีสิทธิ์หรือไม่ใช่เจ้าของข้อมูล, `404` ไม่พบข้อมูล, `409` ที่นั่ง/booking/payment ชนกัน, `422` ไม่ผ่านกติกาธุรกิจ และ `500` ระบบภายใน
+
+### A. Customer authentication และ profile
+
+| Method และ path | Params/query | Request body | Success response |
+|---|---|---|---|
+| `POST /api/v1/customer/auth/register` | ไม่มี | `{fullName:string, phone:string, email:string, password:string}` | `201 {data:{accessToken:string, refreshToken:string, user:Customer}}` |
+| `POST /api/v1/customer/auth/login` | ไม่มี | `{email:string, password:string}` | `200 {data:{accessToken:string, refreshToken:string, user:Customer}}` |
+| `POST /api/v1/customer/auth/line` | ไม่มี | `{lineAccessToken:string}` | `200 {data:{accessToken:string, refreshToken:string, user:Customer}}` |
+| `POST /api/v1/customer/auth/refresh` | ไม่มี | `{refreshToken:string}` | `200 {data:{accessToken:string, refreshToken:string, user?:Customer}}` |
+| `POST /api/v1/customer/auth/logout` | Bearer; ไม่มี query | `{refreshToken?:string}` | `200 {data:{loggedOut:true}}` |
+| `GET /api/v1/customer/me` | Bearer; ไม่มี query | ไม่มี | `200 {data:{id,fullName,phone,email,avatarUrl?,idType?,idNumber?,points,walletBalance,createdAt}}` |
+| `PATCH /api/v1/customer/me` | Bearer; ไม่มี query | อย่างน้อยหนึ่ง field จาก `{fullName?,phone?,email?,avatarUrl?,idType?,idNumber?}` | `200 {data:Customer}` |
+
+Validation ที่สำคัญ: email ต้อง unique และ valid, password ต้องผ่านความยาวขั้นต่ำ, LINE token ต้องตรวจสอบกับ LINE provider, refresh token ต้อง revoke ได้, ห้ามคืน password/hash ใน response
+
+### B. Customer configuration และ geography
+
+| Method และ path | Params/query | Request body | Success response |
+|---|---|---|---|
+| `GET /api/v1/customer/config` | `companyCode?`, `host?` | ไม่มี | `200 {data:{company:{id,code,displayName,address,phone,currency,timezone},salesSettings:{ticketTerms,blockSalesAfterDeparture},preferences:{...}}}` |
+| `GET /api/v1/customer/routes` | `limit?` 1–200, `offset?` >=0, `status?=published` | ไม่มี | `200 {data:[{id,name,originStationId,destinationStationId,origin,destination,distanceKm,durationMinutes}],meta}` |
+| `GET /api/v1/customer/provinces` | `routeId?`, `limit?`, `offset?` | ไม่มี | `200 {data:[{id,name,nameEn,routeIds:string[]}],meta}` |
+| `GET /api/v1/customer/boarding-points` | `provinceId?`, `routeId?`, `type?=pickup\|dropoff\|stop`, `limit?`, `offset?` | ไม่มี | `200 {data:[{id,name,nameEn,provinceId,routeId,type,stopOrder,latitude?,longitude?}],meta}` |
+| `GET /api/v1/customer/route-stops` | `routeId` required UUID, `limit?`, `offset?` | ไม่มี | `200 {data:[{id,routeId,stationId,name,stopOrder,type,latitude?,longitude?}],meta}` |
+
+Errors เพิ่มเติม: `400` เมื่อ UUID/filters ไม่ถูกต้อง, `404` เมื่อ route/province ไม่พบ
+
+### C. Customer trip search, detail และ seat map
+
+#### `POST /api/v1/customer/trips/search`
+
+Request body:
+
+```json
+{
+  "routeId": "uuid",
+  "originProvinceId": "uuid",
+  "destinationProvinceId": "uuid",
+  "originStationId": "uuid",
+  "destinationStationId": "uuid",
+  "date": "2026-08-13",
+  "passengerCount": 1,
+  "sort": "asc"
+}
+```
+
+`routeId`, `originProvinceId`, `destinationProvinceId`, `date` และ `passengerCount` เป็น optional ตาม UX แต่ต้องมี origin/destination ที่ resolve ได้ และ `passengerCount` ต้องเป็น integer 1–20 เมื่อส่งมา
+
+Success `200`:
+
+```json
+{
+  "data": [
+    {
+      "id": "uuid",
+      "routeId": "uuid",
+      "routeName": "กรุงเทพฯ - เชียงใหม่",
+      "originStationId": "uuid",
+      "destinationStationId": "uuid",
+      "origin": "กรุงเทพฯ",
+      "destination": "เชียงใหม่",
+      "serviceDate": "2026-08-13",
+      "departureTime": "2026-08-13T08:00:00+07:00",
+      "arrivalTime": "2026-08-13T18:00:00+07:00",
+      "vehicleType": "VIP",
+      "totalSeats": 40,
+      "availableSeats": 25,
+      "startingFare": 500,
+      "status": "planned"
+    }
+  ]
+}
+```
+
+#### `GET /api/v1/customer/trips/:tripId`
+
+Path param: `tripId` required UUID. ไม่มี request body/query ที่จำเป็น
+
+Success `200`:
+
+```json
+{
+  "data": {
+    "trip": {"id":"uuid","routeId":"uuid","serviceDate":"2026-08-13","departureTime":"...","arrivalTime":"...","vehicleType":"VIP","status":"planned"},
+    "stops": [{"stationId":"uuid","name":"หมอชิต","stopOrder":1}],
+    "passengerTypes": [{"code":"adult","name":"ผู้ใหญ่"}],
+    "fares": [{"originStationId":"uuid","destinationStationId":"uuid","passengerType":"adult","amount":500}],
+    "salesSettings": {"ticketTerms":"..."}
+  }
+}
+```
+
+#### `GET /api/v1/customer/trips/:tripId/seats`
+
+Path param: `tripId` required UUID. Query optional: `originStationId`, `destinationStationId` เพื่อคำนวณ seat availability ตามช่วงสถานี
+
+Success `200`:
+
+```json
+{
+  "data": {
+    "tripId": "uuid",
+    "layout": {"id":"uuid","name":"2+2","rows":[["A1","A2"],["B1","B2"]]},
+    "seats": [{"id":"uuid","number":"A1","row":1,"col":1,"floor":1,"status":"available"}],
+    "occupiedSeats": ["B1"],
+    "blockedSeats": ["A4"],
+    "availableSeats": 25
+  }
+}
+```
+
+### D. Add-ons/products
+
+`GET /api/v1/customer/trips/:tripId/add-ons`
+
+- Query: `limit?` 1–100, `offset?` >=0, `categoryId?`, `activeOnly?=true`
+- Body: ไม่มี
+- Success: `200 {data:[{id,productId,title,description,unitPrice,currency,stock,active}],meta}`
+- Errors: `401` หาก product ต้องล็อกอิน, `404` หาก trip ไม่พบ, `400` หาก pagination ไม่ถูกต้อง
+
+### E. Customer booking และ ticket
+
+| Method และ path | Params/query | Request body | Success response |
+|---|---|---|---|
+| `POST /api/v1/customer/bookings` | Bearer; ไม่มี query | ดู JSON booking ด้านล่าง | `201 {data:{bookingId,bookingNo,status,subtotal,discountAmount,addOnAmount,total,paymentId?,holdExpiresAt}}` |
+| `GET /api/v1/customer/bookings` | Bearer; `status?`, `from?`, `to?`, `limit?`, `offset?` | ไม่มี | `200 {data:[BookingSummary],meta}` เฉพาะ customer จาก token |
+| `GET /api/v1/customer/bookings/:bookingId` | Bearer; path `bookingId` UUID | ไม่มี | `200 {data:BookingDetail}` เฉพาะเจ้าของ booking |
+| `POST /api/v1/customer/bookings/:bookingId/cancel` | Bearer; path `bookingId` UUID | `{reason?:string}` | `200 {data:{bookingId,status:"cancelled",refundId?,refundAmount?,cancelledAt}}` |
+| `GET /api/v1/customer/bookings/:bookingId/ticket` | Bearer; path `bookingId` UUID | ไม่มี | `200 {data:{bookingNo,qrCode,ticketTerms,company,trip,seats,passengers,payment}}` |
+
+Request `POST /customer/bookings`:
+
+```json
+{
+  "tripId": "uuid",
+  "travelDate": "2026-08-13",
+  "originStationId": "uuid",
+  "destinationStationId": "uuid",
+  "contactName": "สมชาย ใจดี",
+  "contactPhone": "0812345678",
+  "contactEmail": "user@example.com",
+  "promoCode": "PROMO10",
+  "useStamp": false,
+  "passengers": [{"seatId":"uuid","seatNumber":"A1","fullName":"สมหญิง ใจดี","thaiId":"1234567890123","phone":"0812345678","passengerType":"adult"}],
+  "addOns": [{"productId":"uuid","quantity":1}],
+  "paymentMethod": "promptpay"
+}
+```
+
+`paymentMethod` รับ `promptpay`, `alipay`, `wechat_pay_mpm`, `wallet` หรือ `pay_later` ตาม policy ของระบบ หากไม่ชำระทัน `holdExpiresAt` ให้ระบบปล่อยที่นั่งอัตโนมัติ
+
+`BookingSummary` ต้องมีอย่างน้อย: `id`, `bookingNo`, `status`, `tripId`, `routeName`, `serviceDate`, `scheduledDeparture`, `scheduledArrival`, `seatNumbers`, `totalAmount`, `paymentStatus`, `createdAt`
+
+`BookingDetail` ต้องมีอย่างน้อย: summary fields, contact, passengers, seats, fare breakdown, add-ons, promo, payment, QR/ticket, company contact และ cancellation/refund policy
+
+### F. Online payment
+
+| Method และ path | Params/query | Request body | Success response |
+|---|---|---|---|
+| `POST /api/v1/customer/payments` | Bearer | `{bookingId:string, method:"promptpay"\|"alipay"\|"wechat_pay_mpm"\|"wallet"}` | `201 {data:{paymentId,bookingId,provider,providerChargeId?,amount,currency,status,qrCodeUrl?,deepLinkUrl?,expiresAt}}` |
+| `GET /api/v1/customer/payments/:paymentId` | Bearer; path UUID | ไม่มี | `200 {data:{paymentId,bookingId,amount,currency,method,status,paidAt?,failedAt?,expiresAt,providerReference?}}` |
+| `POST /api/v1/customer/payments/:paymentId/cancel` | Bearer; path UUID | `{reason?:string}` | `200 {data:{paymentId,status:"cancelled",cancelledAt}}` |
+| `POST /api/v1/customer/payments/webhook/:provider` | ไม่ใช้ customer Bearer; provider signature header required | raw provider payload | `200 {data:{accepted:true}}` |
+
+Payment errors: `409 PAYMENT_ALREADY_PAID`, `409 PAYMENT_EXPIRED`, `422 PAYMENT_METHOD_NOT_AVAILABLE`, `401/403` ownership failure และ `400` provider payload invalid
+
+### G. Promotions
+
+| Method และ path | Params/query | Request body | Success response |
+|---|---|---|---|
+| `GET /api/v1/customer/promotions` | `memberOnly?`, `visibility?`, `routeId?`, `dayOfWeek?`, `time?`, `phone?`, `limit?`, `offset?` | ไม่มี | `200 {data:[{id,title,description,imageUrl,promoCode,discountPercent,discountAmount,remainingQuota,expiryDate,validityDays,memberOnly}],meta}` |
+| `GET /api/v1/customer/promotions/:promotionId` | path UUID; ไม่มี query | ไม่มี | `200 {data:PromotionDetail}` |
+| `POST /api/v1/customer/promotions/validate` | Bearer optional | `{promoCode:string,tripId:string,passengerCount?:number,addOns?:[{productId,quantity}]}` | `200 {data:{valid:boolean,promoCode,discountAmount,discountPercent,eligibleTotal,message?,expiresAt?}}` |
+
+### H. Points, wallet และ content
+
+| Method และ path | Params/query | Request body | Success response |
+|---|---|---|---|
+| `GET /api/v1/customer/points` | Bearer; ไม่มี query | ไม่มี | `200 {data:{totalPoints,nextRewardAt,rewardValue,updatedAt}}` |
+| `GET /api/v1/customer/points/history` | Bearer; `from?`, `to?`, `type?=earn\|redeem`, `limit?`, `offset?` | ไม่มี | `200 {data:[{id,description,date,amount,points,type,bookingId?}],meta}` |
+| `GET /api/v1/customer/wallet` | Bearer; `limit?`, `offset?` | ไม่มี | `200 {data:{balance,availablePoints,transactions:[{id,description,date,amount,type,bookingId?}],meta}}` |
+| `GET /api/v1/customer/preferences` | `locale?`, `key?` | ไม่มี | `200 {data:{locale,timezone,features,contact,terms}}` |
+| `GET /api/v1/customer/faqs` | `category?`, `locale?`, `limit?`, `offset?` | ไม่มี | `200 {data:[{id,category,question,answer,sortOrder}],meta}` |
+
+### I. Complaint, check-in และ tracking
+
+| Method และ path | Params/query | Request body | Success response |
+|---|---|---|---|
+| `POST /api/v1/customer/complaints` | Bearer optional; ไม่มี query | `{reporterPhone:string,complaintText:string,vehiclePlate?:string,tripId?:string,bookingId?:string,seatCode?:string,attachments?:string[]}` | `201 {data:{id,caseNo,status:"open",createdAt}}` |
+| `POST /api/v1/customer/check-in` | Bearer; ไม่มี query | `{ticketNumber:string,qrCode:string}` | `200 {data:{checkedIn:true,bookingId,seatNumbers,checkedInAt}}` |
+| `GET /api/v1/customer/trips/:tripId/driver-location` | Bearer; path UUID; `fresh?=true` | ไม่มี | `200 {data:{tripId,latitude,longitude,accuracyM,heading?,speed?,recordedAt}}` |
+| `POST /api/v1/customer/trips/:tripId/passenger-location` | Bearer; path UUID | `{latitude:number,longitude:number,accuracy_m:number}` | `202 {data:{accepted:true,tripId,recordedAt}}` |
+
+Complaint, check-in และ tracking ต้องตรวจ booking ownership หรือสิทธิ์จาก ticket ที่ยัง active ก่อนคืนข้อมูล/รับข้อมูล
+
+## 6. Supabase ที่ต้องย้ายเป็น API contract
+
+ส่วนนี้แปลง query ที่ `nova-ticket` เคยเรียก Supabase จาก browser ให้เป็น endpoint โดยตรง แต่ละรายการระบุ path, method, params, request และ response ที่ต้อง implement
+
+### 6.1 Company และ sales settings
+
+แหล่งเดิม: `src/lib/company.ts`, `src/pages/Home.tsx` — อ่าน `companies` และ relation `company_sales_settings` โดยค้นจากชื่อบริษัท
+
+#### `GET /api/v1/customer/config`
+
+| รายการ | รายละเอียด |
+|---|---|
+| Method | `GET` |
+| Query params | `companyCode?: string`, `companyName?: string`; ต้องส่งอย่างใดอย่างหนึ่งเมื่อระบบมีหลายบริษัท ถ้ามี tenant จาก host จะไม่ต้องส่ง |
+| Headers | `Accept: application/json`; ไม่จำเป็นต้องล็อกอินสำหรับ public config |
+| Request body | ไม่มี |
+| Success | `200` |
+
+Request ตัวอย่าง:
+
+```http
+GET /api/v1/customer/config?companyCode=NOVA
+Accept: application/json
+```
+
+Response:
+
+```json
+{
+  "data": {
+    "company": {
+      "id": "uuid",
+      "code": "NOVA",
+      "legalName": "Nova Express Co., Ltd.",
+      "displayName": "Nova Express",
+      "companyAddress": "ที่อยู่บริษัท",
+      "companyTell": "020000000",
+      "currency": "THB",
+      "timezone": "Asia/Bangkok",
+      "locale": "th-TH"
+    },
+    "salesSettings": {
+      "blockSalesAfterDeparture": true,
+      "allowSalesWithoutAssignment": false,
+      "ticketTerms": "เงื่อนไขการเดินทาง"
+    },
+    "preferences": {
+      "defaultLocale": "th-TH",
+      "supportPhone": "020000000"
+    }
+  }
+}
+```
+
+Response errors: `400 CONFIG_SELECTOR_REQUIRED`, `404 COMPANY_NOT_FOUND`
+
+### 6.2 Passenger tiers / passenger types
+
+แหล่งเดิม: `src/components/booking/PassengerInfoSection.tsx` — query `passenger_tiers` ที่ `requires_document = false`
+
+#### `GET /api/v1/customer/passenger-types`
+
+| รายการ | รายละเอียด |
+|---|---|
+| Method | `GET` |
+| Query params | `requiresDocument?: boolean` (default `false`), `status?: active`, `limit?: 1..100`, `offset?: >=0` |
+| Headers | `Accept: application/json`; public ได้ถ้า passenger types ไม่ผูกสมาชิก |
+| Request body | ไม่มี |
+| Success | `200` |
+
+Request ตัวอย่าง:
+
+```http
+GET /api/v1/customer/passenger-types?requiresDocument=false&status=active&limit=50&offset=0
+```
+
+Response:
+
+```json
+{
+  "data": [
+    {
+      "id": "uuid",
+      "code": "adult",
+      "name": "ผู้ใหญ่",
+      "nameEn": "Adult",
+      "description": null,
+      "requiresDocument": false,
+      "sortOrder": 1,
+      "status": "active"
+    }
+  ],
+  "meta": { "limit": 50, "offset": 0, "total": 1 }
+}
+```
+
+Response errors: `400 INVALID_PAGINATION`, `404 PASSENGER_TYPES_NOT_FOUND` (ถ้าต้องการแยกกรณีไม่มีข้อมูล)
+
+### 6.3 Route list
+
+แหล่งเดิม: `src/pages/Home.tsx` — query `routes.select('*')` และนำไปกรองตาม `region_id`
+
+#### `GET /api/v1/customer/routes`
+
+| รายการ | รายละเอียด |
+|---|---|
+| Method | `GET` |
+| Query params | `regionId?: string`, `status?: published`, `originStationId?: uuid`, `destinationStationId?: uuid`, `limit?: 1..200`, `offset?: >=0` |
+| Headers | `Accept: application/json`; public |
+| Request body | ไม่มี |
+| Success | `200` |
+
+Request ตัวอย่าง:
+
+```http
+GET /api/v1/customer/routes?regionId=north&status=published&limit=50&offset=0
+```
+
+Response:
+
+```json
+{
+  "data": [
+    {
+      "id": "uuid",
+      "code": "BKK-CNX",
+      "name": "กรุงเทพฯ - เชียงใหม่",
+      "origin": {"id":"uuid","name":"กรุงเทพฯ","nameEn":"Bangkok"},
+      "destination": {"id":"uuid","name":"เชียงใหม่","nameEn":"Chiang Mai"},
+      "regionId": "north",
+      "distanceKm": 700,
+      "durationMinutes": 600,
+      "status": "published"
+    }
+  ],
+  "meta": { "limit": 50, "offset": 0, "total": 1 }
+}
+```
+
+Response errors: `400 INVALID_ROUTE_FILTER`, `404 ROUTES_NOT_FOUND` (ถ้าต้องการแยกกรณีไม่มีข้อมูล)
+
+### 6.4 Route lookup ตามต้นทางและปลายทาง
+
+แหล่งเดิม: `src/pages/Home.tsx` — query `routes` ด้วย `origin_id` และ `destination_id` แล้วเลือก route เดียว
+
+#### `GET /api/v1/customer/routes/lookup`
+
+| รายการ | รายละเอียด |
+|---|---|
+| Method | `GET` |
+| Query params | `originStationId: uuid` required, `destinationStationId: uuid` required |
+| Headers | `Accept: application/json`; public |
+| Request body | ไม่มี |
+| Success | `200` |
+
+Request ตัวอย่าง:
+
+```http
+GET /api/v1/customer/routes/lookup?originStationId=11111111-1111-1111-1111-111111111111&destinationStationId=22222222-2222-2222-2222-222222222222
+```
+
+Response เมื่อพบ route:
+
+```json
+{
+  "data": {
+    "id": "uuid",
+    "code": "BKK-CNX",
+    "name": "กรุงเทพฯ - เชียงใหม่",
+    "originStationId": "11111111-1111-1111-1111-111111111111",
+    "destinationStationId": "22222222-2222-2222-2222-222222222222",
+    "origin": "กรุงเทพฯ",
+    "destination": "เชียงใหม่",
+    "status": "published"
+  }
+}
+```
+
+Response errors: `400 STATIONS_REQUIRED`, `404 ROUTE_NOT_FOUND`, `409 MULTIPLE_ROUTES_MATCH` (ถ้ามีมากกว่าหนึ่ง route และไม่สามารถเลือกอัตโนมัติ)
+
+### 6.5 Customer bookings ที่ใช้แทน query Supabase
+
+แหล่งเดิม: `src/pages/Home.tsx` — query `bookings` ของ user เพื่อหา ticket ที่ยังเป็น `confirmed/upcoming` และ `paymentStatus = paid` ก่อนส่งตำแหน่งผู้โดยสาร
+
+#### `GET /api/v1/customer/bookings`
+
+| รายการ | รายละเอียด |
+|---|---|
+| Method | `GET` |
+| Query params | `status?: upcoming,confirmed`, `paymentStatus?: paid`, `serviceDateFrom?: YYYY-MM-DD`, `serviceDateTo?: YYYY-MM-DD`, `limit?: 1..100`, `offset?: >=0` |
+| Headers | `Authorization: Bearer <customerAccessToken>` |
+| Request body | ไม่มี |
+| Success | `200` |
+
+Request ตัวอย่าง:
+
+```http
+GET /api/v1/customer/bookings?status=upcoming,confirmed&paymentStatus=paid&limit=100&offset=0
+Authorization: Bearer <customerAccessToken>
+```
+
+Response:
+
+```json
+{
+  "data": [
+    {
+      "id": "uuid",
+      "bookingNo": "BK-20260813-0001",
+      "status": "confirmed",
+      "paymentStatus": "paid",
+      "tripId": "uuid",
+      "serviceDate": "2026-08-13",
+      "scheduledDeparture": "2026-08-13T08:00:00+07:00",
+      "scheduledArrival": "2026-08-13T18:00:00+07:00",
+      "routeName": "กรุงเทพฯ - เชียงใหม่",
+      "seatNumbers": ["A1"],
+      "totalAmount": 500
+    }
+  ],
+  "meta": { "limit": 100, "offset": 0, "total": 1 }
+}
+```
+
+การ filter ต้องมาจาก `customerId` ใน Bearer token ห้ามรับ `userId` เป็น query parameter และห้ามคืน booking ของลูกค้ารายอื่น
+
+Response errors: `401 UNAUTHENTICATED`, `400 INVALID_BOOKING_FILTER`
+
+### 6.6 Supabase-to-API mapping สรุป
+
+| Supabase เดิม | API path ใหม่ | Method | Authentication |
+|---|---|---|---|
+| `companies` + `company_sales_settings` | `/api/v1/customer/config` | `GET` | Public/tenant context |
+| `passenger_tiers` | `/api/v1/customer/passenger-types` | `GET` | Public หรือ customer token |
+| `routes.select('*')` | `/api/v1/customer/routes` | `GET` | Public |
+| route lookup `origin_id` + `destination_id` | `/api/v1/customer/routes/lookup` | `GET` | Public |
+| `bookings` ของ customer ที่ active/paid | `/api/v1/customer/bookings` | `GET` | Customer Bearer |
+
+ทุก endpoint ด้านบนต้องคืน DTO ที่กำหนดไว้ ไม่คืน row จาก Supabase/PostgreSQL โดยตรง และไม่เปิด `user_id`, internal payment fields หรือข้อมูลภายในที่ frontend ไม่จำเป็นต้องใช้
 
 ## 7. Diagram: ความสัมพันธ์ของระบบเดิมและระบบใหม่
 
 ```mermaid
 flowchart LR
-  UI[go-glee Passenger App]
+  UI[nova-ticket Passenger App]
   Old[Existing /api service]
   Supa[(Supabase tables)]
   Gateway[/api/v1 gateway]
-  Admin[Existing nova-express Admin API]
-  Customer[New /api/v1/customer API]
+  Customer[Customer /api/v1 API]
   DB[(PostgreSQL)]
   Pay[Payment Providers]
 
@@ -397,9 +871,7 @@ flowchart LR
   UI -. direct reads today .-> Supa
   Old --> Supa
   UI --> Gateway
-  Gateway --> Admin
   Gateway --> Customer
-  Admin --> DB
   Customer --> DB
   Customer --> Pay
 ```
@@ -532,7 +1004,7 @@ flowchart TD
 ต้องครบทุกข้อ:
 
 - มี handler, OpenAPI schema และ test สำหรับทุก customer endpoint
-- customer token แยกจาก employee token หรือมี role boundary ที่ตรวจสอบได้
+- customer token/session ต้องมี owner เป็นลูกค้า และตรวจสอบ booking ownership ทุกครั้ง
 - booking ใช้ database transaction และ seat locking
 - payment webhook ตรวจ signature และรองรับ idempotency
 - booking detail/list ตรวจ ownership
@@ -546,4 +1018,4 @@ flowchart TD
 - **ใช้เป็นฐานได้:** routes, route stops, stations, passenger types, sale trips, sale trip detail, products และ booking transaction บางส่วน
 - **ต้องปรับหนัก:** login/logout, trip search, seats, booking detail/list, refund/cancel และ response/pagination mapping
 - **ต้องเขียนใหม่:** customer auth/register/LINE/refresh, online payment, promotions, points, wallet, FAQ, complaints, check-in, tracking และ Supabase replacement endpoints
-- **ห้ามใช้ตรง ๆ:** `/api/v1/auth/me`, `/api/v1/bookings` list และ employee permission endpoints กับ passenger app โดยไม่เพิ่ม customer ownership/authorization
+- **ห้ามใช้ตรง ๆ:** endpoint ที่ยังรับ username, branch, cash sale หรือคืนข้อมูลกว้างกว่าลูกค้าคนนั้น ต้องปรับเป็น customer contract ก่อน
