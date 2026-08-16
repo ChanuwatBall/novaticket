@@ -58,6 +58,10 @@ This project is built with:
 - shadcn-ui
 - Tailwind CSS
 
+## LINE LIFF configuration
+
+The app loads the tenant-specific LIFF ID from `GET /api/v1/config` before calling `liff.init()`. The API resolves the tenant from the request hostname and returns the public value in `companyLineConfig.liff_id`; `VITE_LIFF_ID` is no longer used for initialization.
+
 ## How can I deploy this project?
 
 Simply open [Lovable](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and click on Share -> Publish.

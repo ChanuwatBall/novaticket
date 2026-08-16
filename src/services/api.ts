@@ -1,4 +1,5 @@
 import { Capacitor, CapacitorHttp } from "@capacitor/core";
+import axios from "axios";
 
 const envBaseUrl = import.meta.env.VITE_API_URL?.trim() || "/";
 
@@ -42,6 +43,7 @@ const buildUrl = (path: string) => {
 
   return baseUrl && baseUrl !== "/" ? `${baseUrl}${normalizedPath}` : normalizedPath;
 };
+
 
 const request = async <T = any>(
   method: "get" | "post" | "patch",
@@ -93,6 +95,21 @@ const getAuthHeaders = () => {
 
 const getErrorData = (err: any) => err?.response?.data ?? { error: err?.message ?? "Network error" }
 
+export type PublicCompanyConfig = {
+  config_version: number;
+  config_updated_at: string;
+  companyLineConfig: {
+    id: string;
+    company_id: string;
+    channel_id: string | null;
+    liff_id: string | null;
+    callback_url: string | null;
+    provider_id: string | null;
+    is_active: boolean;
+    has_channel_secret: boolean;
+  } | null;
+};
+
 export const getPreferences=async ()=>{
   return await api.get("/api/preferences")
     .then((res) => {
@@ -104,6 +121,15 @@ export const getPreferences=async ()=>{
       return getErrorData(err)
     })
 }
+
+export const getConfig = async (): Promise<PublicCompanyConfig> => {
+  const response = await axios.get<{ data: PublicCompanyConfig }>( "http://localhost:3001/api/v1/config");
+  const config = response.data?.data;
+
+  if (!config) throw new Error("Config API returned an invalid response");
+
+  return config;
+};
 export const login = async (body: any) => {
   return await api.post("/api/auth/login", body)
     .then((res) => {

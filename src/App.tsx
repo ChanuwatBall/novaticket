@@ -31,7 +31,7 @@ import NotFound from "./pages/NotFound";
 import BottomNav from "./components/BottomNav";
 import PromotionDetail from "./pages/PromotionDetail"; 
 import TrackBus from "./pages/TrackBus";
-import { getPreferences, loginWithLine, refreshToken } from "./services/api";
+import { getConfig, getPreferences, loginWithLine, refreshToken } from "./services/api";
 import { applyPreferences, resolvePreferences, storePreferences } from "./lib/preferences";
 import { applyRemoteLanguageResources } from "./i18n/remoteResources";
 
@@ -114,8 +114,20 @@ const App = () => {
 
     const initLiff = async () => {
       try {
+        const config = await getConfig();
+        const lineConfig = config.companyLineConfig;
+
+        if (!lineConfig?.is_active) {
+          throw new Error("LINE login is disabled for this company");
+        }
+
+        const liffId = lineConfig.liff_id?.trim();
+        if (!liffId) {
+          throw new Error("LINE LIFF ID is not configured for this company");
+        }
+
         await withTimeout(
-          liff.init({ liffId: import.meta.env.VITE_LIFF_ID }),
+          liff.init({ liffId }),
           LIFF_INIT_TIMEOUT_MS,
           "LIFF init",
         );
