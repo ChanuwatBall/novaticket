@@ -5,7 +5,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { CheckCircle, ClockAlert, Download, Loader2 } from "lucide-react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useEffect, useState } from "react";
-import { bookingDetail } from "@/services/api";
+import { bookingDetail, getAccessToken } from "@/services/api";
 import QRCode from "qrcode";
 import { t } from "i18next";
 import liff from "@line/liff";
@@ -36,8 +36,12 @@ const ETicketPage = () => {
         setIsLoading(false);
         return;
       }
-      const user = JSON.parse(userstr);
-      const res = await bookingDetail({ id: bookingref, token: user.token });
+      const accessToken = getAccessToken();
+      if (!accessToken) {
+        setIsLoading(false);
+        return;
+      }
+      const res = await bookingDetail({ id: bookingref, token: accessToken });
       console.log("bookingDetail res ", res);
       if (res?.error !== undefined) {
         console.log("error booking detail");

@@ -88,16 +88,50 @@ const getStoredUser = () => JSON.parse(localStorage.getItem("user") || "{}")
 
 const getAuthHeaders = () => {
   const user = getStoredUser()
-  const token = user.token || user.access_token
+  const token = user.accessToken || user.access_token || user.token
 
   return token ? { Authorization: `Bearer ${token}` } : {}
 }
 
-const getErrorData = (err: any) => err?.response?.data ?? { error: err?.message ?? "Network error" }
+export const getAccessToken = () => {
+  const user = getStoredUser()
+  return user.accessToken || user.access_token || user.token || ""
+}
+
+const getErrorData = (err: any) => {
+  const data = err?.response?.data
+  if (data) {
+    const error = typeof data.error === "object" ? data.error : undefined
+    return {
+      ...data,
+      error: error?.code || data.error,
+      message: error?.message || data.message || err?.message,
+    }
+  }
+  return { error: err?.message ?? "Network error", message: err?.message ?? "Network error" }
+}
+
+const unwrapData = <T,>(response: ApiResponse<{ data: T } | T>): T => {
+  const payload = response.data
+  return payload && typeof payload === "object" && "data" in payload
+    ? (payload.data as T)
+    : (payload as T)
+}
 
 export type PublicCompanyConfig = {
+  host?: string;
   config_version: number;
   config_updated_at: string;
+  companySettings?: {
+    company_id: string;
+    block_sales_after_departure?: boolean;
+    allow_sales_without_assignment?: boolean;
+    ticket_terms?: string | null;
+    domain_prod?: string | null;
+    domain_dev?: string | null;
+    updated_by?: string | null;
+    updated_at?: string;
+  } | null;
   companyLineConfig: {
     id: string;
     company_id: string;
@@ -108,22 +142,28 @@ export type PublicCompanyConfig = {
     is_active: boolean;
     has_channel_secret: boolean;
   } | null;
+  branding?: {
+    appTitle?: string | null;
+    appShortName?: string | null;
+    brandName?: string | null;
+    logoUrl?: string | null;
+    logoDarkUrl?: string | null;
+    faviconUrl?: string | null;
+    loginBackgroundUrl?: string | null;
+  } | null;
+  theme?: {
+    primaryColor?: string | null;
+    secondaryColor?: string | null;
+    accentColor?: string | null;
+    backgroundColor?: string | null;
+    textColor?: string | null;
+    config?: Record<string, unknown> | null;
+  } | null;
 };
 
-export const getPreferences=async ()=>{
-  return await api.get("/api/preferences")
-    .then((res) => {
-      console.log("preferences res ", res)
-      return res.data
-    })
-    .catch((err) => {
-      console.log("preferences err ", err)
-      return getErrorData(err)
-    })
-}
-
 export const getConfig = async (): Promise<PublicCompanyConfig> => {
-  const response = await axios.get<{ data: PublicCompanyConfig }>( "http://localhost:3001/api/v1/config");
+  const configUrl = import.meta.env.VITE_CONFIG_API_URL?.trim() || "http://localhost:3001/api/v1/config";
+  const response = await axios.get<{ data: PublicCompanyConfig }>(configUrl);
   const config = response.data?.data;
 
   if (!config) throw new Error("Config API returned an invalid response");
@@ -131,10 +171,10 @@ export const getConfig = async (): Promise<PublicCompanyConfig> => {
   return config;
 };
 export const login = async (body: any) => {
-  return await api.post("/api/auth/login", body)
+  return await api.post("/api/v1/customer/auth/login", body)
     .then((res) => {
       console.log("login res ", res)
-      return res.data
+      return unwrapData(res)
     })
     .catch((err) => {
       console.log("login err ", err)
@@ -143,10 +183,10 @@ export const login = async (body: any) => {
 }
 
 export const register = async (body: any) => {
-  return await api.post("/api/auth/register", body)
+  return await api.post("/api/v1/customer/auth/register", body)
     .then((res) => {
       console.log("register res ", res)
-      return res.data
+      return unwrapData(res)
     })
     .catch((err) => {
       console.log("register err ", err)
@@ -155,12 +195,10 @@ export const register = async (body: any) => {
 }
 
 export const loginWithLine = async (body: { lineAccessToken: string }) => {
-  return await api.post("/api/auth/line", {
-    "lineAccessToken": body.lineAccessToken
-  })
+  return await api.post("/api/v1/customer/auth/line", body)
     .then((res) => {
       console.log("loginWithLine res ", res)
-      return res.data
+      return unwrapData(res)
     })
     .catch((err) => {
       console.log("loginWithLine err ", err)
@@ -168,11 +206,11 @@ export const loginWithLine = async (body: { lineAccessToken: string }) => {
     })
 }
 
-export const refreshToken = async (body: { refresh_token: string }) => {
-  return await api.post("/api/auth/refresh", body)
+export const refreshToken = async (body: { refreshToken: string }) => {
+  return await api.post("/api/v1/customer/auth/refresh", body)
     .then((res) => {
       console.log("refreshToken res ", res)
-      return res.data
+      return unwrapData(res)
     })
     .catch((err) => {
       console.log("refreshToken err ", err)
@@ -182,14 +220,14 @@ export const refreshToken = async (body: { refresh_token: string }) => {
 
 export const logout = async () => {
   const user = getStoredUser()
-  return await api.post("/api/auth/logout", {
-    refresh_token: user.refresh_token
+  return await api.post("/api/v1/customer/auth/logout", {
+    refreshToken: user.refreshToken
   }, {
     headers: getAuthHeaders()
   })
     .then((res) => {
       console.log("logout res ", res)
-      return res.data
+      return unwrapData(res)
     })
     .catch((err) => {
       console.log("logout err ", err)
@@ -454,12 +492,12 @@ export const getWalletPoint = async () => {
 }
 
 export const getUserMe = async () => {
-  return await api.get(`/api/users/me`, {
+  return await api.get(`/api/v1/customer/me`, {
     headers: getAuthHeaders()
   })
     .then((res) => {
       console.log("getUserMe res ", res)
-      return res.data
+      return unwrapData(res)
     })
     .catch((err) => {
       console.log("getUserMe err ", err)
@@ -467,13 +505,23 @@ export const getUserMe = async () => {
     })
 }
 
-export const updateMyProfile = async (body: { fullName?: string, phone?: string, email?: string, avatarUrl?: string, idType?: string, idNumber?: string }) => {
-  return await api.patch(`/api/users/me`, body, {
+export type CustomerProfileUpdate = {
+  fullName?: string;
+  phone?: string;
+  email?: string;
+  avatarUrl?: string;
+  idType?: string;
+  idNumber?: string;
+  expiryDate?: string;
+};
+
+export const updateMyProfile = async (body: CustomerProfileUpdate) => {
+  return await api.patch(`/api/v1/customer/me`, body, {
     headers: getAuthHeaders()
   })
     .then((res) => {
       console.log("updateMyProfile res ", res)
-      return res.data
+      return unwrapData(res)
     })
     .catch((err) => {
       console.log("updateMyProfile err ", err)

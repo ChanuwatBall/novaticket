@@ -1,22 +1,34 @@
-type AppPreferences = {
+import type { PublicCompanyConfig } from "@/services/api";
+
+export type AppPreferences = {
   oaTitle?: string | null;
   colorPrimary?: string | null;
   colorSecondary?: string | null;
+  colorAccent?: string | null;
+  colorBackground?: string | null;
+  colorText?: string | null;
+  fontFamily?: string | null;
+  borderRadius?: string | null;
   languageResources?: unknown;
   webIconUrl?: string | null;
   web_icon_url?: string | null;
 };
 
-type PreferenceContainer = {
-  data?: unknown;
-  payload?: unknown;
-  result?: unknown;
-  preference?: unknown;
-  preferences?: unknown;
-  company?: unknown;
-  config?: unknown;
-  settings?: unknown;
-};
+export const configToPreferences = (config: PublicCompanyConfig): AppPreferences => ({
+  oaTitle: config.branding?.appTitle || config.branding?.brandName,
+  colorPrimary: config.theme?.primaryColor,
+  colorSecondary: config.theme?.secondaryColor,
+  colorAccent: config.theme?.accentColor,
+  colorBackground: config.theme?.backgroundColor,
+  colorText: config.theme?.textColor,
+  fontFamily: typeof config.theme?.config?.fontFamily === "string"
+    ? config.theme.config.fontFamily
+    : undefined,
+  borderRadius: typeof config.theme?.config?.borderRadius === "string"
+    ? config.theme.config.borderRadius
+    : undefined,
+  webIconUrl: config.branding?.faviconUrl || config.branding?.logoUrl,
+});
 
 const PREFERENCES_STORAGE_KEY = "preferences";
 
@@ -45,6 +57,7 @@ const normalizeIconUrl = (value?: string | null) => {
   const iconValue = value?.trim();
   if (!iconValue) return null;
   if (isDataUrl(iconValue)) return iconValue;
+  if (/^(https?:)?\/\//i.test(iconValue) || iconValue.startsWith("/")) return iconValue;
   if (looksLikeBase64(iconValue)) return `data:image/png;base64,${iconValue.replace(/\s+/g, "")}`;
   return null;
 };
@@ -111,55 +124,6 @@ const mixHexColors = (baseHex: string, targetHex: string, weight: number) => {
   return `#${toHex(toChannel(base.r, target.r))}${toHex(toChannel(base.g, target.g))}${toHex(toChannel(base.b, target.b))}`;
 };
 
-const PREFERENCE_KEYS = new Set([
-  "oaTitle",
-  "colorPrimary",
-  "colorSecondary",
-  "system",
-  "booking",
-  "loyalty",
-  "languageResources",
-  "theme",
-  "webIconUrl",
-  "web_icon_url",
-]);
-
-const isRecord = (value: unknown): value is Record<string, unknown> => typeof value === "object" && value !== null;
-
-const looksLikePreferences = (value: unknown): value is AppPreferences => {
-  if (!isRecord(value)) return false;
-  return Object.keys(value).some((key) => PREFERENCE_KEYS.has(key));
-};
-
-export const resolvePreferences = (input: unknown): AppPreferences | null => {
-  const queue: unknown[] = [input];
-  const visited = new Set<unknown>();
-
-  while (queue.length > 0) {
-    const current = queue.shift();
-    if (!isRecord(current) || visited.has(current)) continue;
-
-    visited.add(current);
-
-    if (looksLikePreferences(current)) {
-      return current as AppPreferences;
-    }
-
-    const container = current as PreferenceContainer;
-    queue.push(
-      container.data,
-      container.payload,
-      container.result,
-      container.preference,
-      container.preferences,
-      container.company,
-      container.config,
-      container.settings,
-    );
-  }
-
-  return null;
-};
 
 export const getStoredPreferences = (): AppPreferences | null => {
   try {
@@ -184,9 +148,12 @@ export const applyPreferences = (preferences?: AppPreferences | null) => {
   const iconUrl = normalizeIconUrl(preferences?.web_icon_url ?? preferences?.webIconUrl);
   const primaryHex = normalizeHexColor(preferences?.colorPrimary, DEFAULT_PRIMARY) ?? DEFAULT_PRIMARY;
   const secondaryHex = normalizeHexColor(preferences?.colorSecondary, DEFAULT_SECONDARY) ?? DEFAULT_SECONDARY;
+  const configuredAccentHex = normalizeHexColor(preferences?.colorAccent);
+  const backgroundHex = normalizeHexColor(preferences?.colorBackground);
+  const textHex = normalizeHexColor(preferences?.colorText);
   const primaryHsl = hexToHslString(primaryHex);
   const secondaryHsl = hexToHslString(secondaryHex);
-  const accentHex = mixHexColors(secondaryHex, "#FFFFFF", 0.85);
+  const accentHex = configuredAccentHex || mixHexColors(secondaryHex, "#FFFFFF", 0.85);
   const accentHsl = hexToHslString(accentHex);
 
   document.title = title;
@@ -217,6 +184,18 @@ export const applyPreferences = (preferences?: AppPreferences | null) => {
 
   if (accentHsl) {
     root.style.setProperty("--accent", accentHsl);
+  }
+
+  const backgroundHsl = backgroundHex && hexToHslString(backgroundHex);
+  const textHsl = textHex && hexToHslString(textHex);
+  if (backgroundHsl) root.style.setProperty("--background", backgroundHsl);
+  if (textHsl) root.style.setProperty("--foreground", textHsl);
+  if (preferences?.fontFamily?.trim()) {
+    root.style.setProperty("--app-font-family", preferences.fontFamily.trim());
+    root.style.fontFamily = `${preferences.fontFamily.trim()}, sans-serif`;
+  }
+  if (/^\d+(\.\d+)?(px|rem|em|%)$/.test(preferences?.borderRadius?.trim() || "")) {
+    root.style.setProperty("--radius", preferences!.borderRadius!.trim());
   }
 
   root.style.setProperty("--brand-mid-blue", primaryHex);

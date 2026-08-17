@@ -35,10 +35,12 @@ const Register = () => {
       } else {
         const ltoken = liff.getAccessToken();
         const res = await loginWithLine({ lineAccessToken: ltoken });
-        if (res && res.token) {
+        if (res && res.accessToken) {
           localStorage.setItem("user", JSON.stringify(res));
           toast({ title: "เชื่อมต่อ LINE สำเร็จ!", description: "ยินดีต้อนรับสู่ Nova Express" });
           navigate("/profile");
+        } else {
+          toast({ title: "ลงทะเบียนด้วย LINE ไม่พร้อมใช้งาน", description: res?.message, variant: "destructive" });
         }
       }
     } catch (error) {
@@ -53,8 +55,8 @@ const Register = () => {
       toast({ title: "รหัสผ่านไม่ตรงกัน", description: "กรุณาตรวจสอบรหัสผ่านอีกครั้ง", variant: "destructive" });
       return;
     }
-    if (form.password.length < 6) {
-      toast({ title: "รหัสผ่านสั้นเกินไป", description: "รหัสผ่านต้องมีอย่างน้อย 6 ตัวอักษร", variant: "destructive" });
+    if (form.password.length < 8) {
+      toast({ title: "รหัสผ่านสั้นเกินไป", description: "รหัสผ่านต้องมีอย่างน้อย 8 ตัวอักษร", variant: "destructive" });
       return;
     }
 
@@ -67,7 +69,7 @@ const Register = () => {
         password: form.password
       });
 
-      if (res && res.token) {
+      if (res && res.accessToken) {
         localStorage.setItem("user", JSON.stringify(res));
         toast({ title: "ลงทะเบียนสำเร็จ!", description: "ยินดีต้อนรับสู่ Nova Express" });
         navigate("/profile");
@@ -146,7 +148,7 @@ const Register = () => {
               <div className="space-y-2">
                 <Label htmlFor="password">รหัสผ่าน</Label>
                 <div className="relative">
-                  <Input id="password" name="password" type={showPassword ? "text" : "password"} placeholder="อย่างน้อย 6 ตัวอักษร" value={form.password} onChange={handleChange} required />
+                <Input id="password" name="password" type={showPassword ? "text" : "password"} placeholder="อย่างน้อย 8 ตัวอักษร" value={form.password} onChange={handleChange} required />
                   <button type="button" className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground" onClick={() => setShowPassword(!showPassword)}>
                     {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                   </button>

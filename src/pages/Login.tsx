@@ -29,10 +29,12 @@ const Login = () => {
       } else {
         const ltoken = liff.getAccessToken();
         const res = await loginWithLine({ lineAccessToken: ltoken });
-        if (res && res.token) {
+        if (res && res.accessToken) {
           localStorage.setItem("user", JSON.stringify(res));
           toast({ title: "เข้าสู่ระบบสำเร็จ!", description: "ยินดีต้อนรับกลับด้วย LINE" });
           navigate("/profile");
+        } else {
+          toast({ title: "เข้าสู่ระบบ LINE ไม่พร้อมใช้งาน", description: res?.message, variant: "destructive" });
         }
       }
     } catch (error) {
@@ -47,7 +49,7 @@ const Login = () => {
 
     try {
       const res = await login(form);
-      if (res && res.token) {
+      if (res && res.accessToken) {
         localStorage.setItem("user", JSON.stringify(res));
         toast({ title: "เข้าสู่ระบบสำเร็จ!", description: "ยินดีต้อนรับกลับ" });
         navigate("/profile");

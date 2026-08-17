@@ -49,15 +49,32 @@ const getCompanySalesSettings = (company: unknown) => {
 const getCompanyProfile = (company: unknown) => {
   const companyData = asRecord(company);
   const salesSettings = getCompanySalesSettings(company);
+  const companySettings = asRecord(companyData?.companySettings || companyData?.company_settings);
+  const branding = asRecord(companyData?.branding);
+  const theme = asRecord(companyData?.theme);
 
   return {
-    name: firstValue(companyData?.name, companyData?.companyName, COMPANY_PROFILE.name),
+    name: firstValue(
+      branding?.brandName,
+      branding?.appTitle,
+      companyData?.name,
+      companyData?.companyName,
+      COMPANY_PROFILE.name,
+    ),
     address: firstValue(companyData?.address, companyData?.companyAddress, COMPANY_PROFILE.address),
     contactName: firstValue(companyData?.contact_name, companyData?.contactName, COMPANY_PROFILE.contactName),
     phone: firstValue(companyData?.phone, companyData?.tel, companyData?.telephone, COMPANY_PROFILE.phone),
     email: firstValue(companyData?.email, COMPANY_PROFILE.email),
     taxId: firstValue(companyData?.tax_id, companyData?.taxId, COMPANY_PROFILE.taxId),
-    ticketTerms: firstValue(companyData?.ticket_terms, companyData?.ticketTerms, COMPANY_PROFILE.ticketTerms),
+    ticketTerms: firstValue(
+      companySettings?.ticket_terms,
+      companySettings?.ticketTerms,
+      companyData?.ticket_terms,
+      companyData?.ticketTerms,
+      COMPANY_PROFILE.ticketTerms,
+    ),
+    logoUrl: firstValue(branding?.logoUrl, branding?.logoDarkUrl),
+    primaryColor: firstValue(theme?.primaryColor, "#124985"),
     fee: salesSettings?.fee,
     vipSeatSurcharge: firstValue(
       salesSettings?.vip_seat_surcharge,
@@ -108,6 +125,7 @@ export const createTicketPdf = async (booking: any, qrCode: string | null, compa
   node.innerHTML = `
     <div>
       <div style="text-align:center;">
+        ${companyProfile.logoUrl ? `<img src="${escapeHtml(companyProfile.logoUrl)}" crossorigin="anonymous" style="display:block;max-width:90px;max-height:48px;object-fit:contain;margin:0 auto 5px;" />` : ""}
         <div style="font-size:18px;font-weight:700;margin-bottom:5px;">${escapeHtml(companyProfile.name)}</div>
         <div style="font-size:10px;margin-top:2px;">${escapeHtml(companyProfile.address)}
          | โทร. / Tel. ${companyProfile.phone}
@@ -117,7 +135,7 @@ export const createTicketPdf = async (booking: any, qrCode: string | null, compa
         ]))}</div>
       </div>
       
-      <div style="text-align:center;font-size:15px;margin:7px 0 10px;">ใบเสร็จรับเงิน / RECEIPT</div>
+      <div style="text-align:center;font-size:15px;font-weight:700;color:${escapeHtml(companyProfile.primaryColor)};margin:7px 0 10px;">ใบเสร็จรับเงิน / RECEIPT</div>
       <div style="display:flex;justify-content:space-between;gap:8px;margin-top:5px;">
         <span style="font-weight:600;font-size:12px;">Booking Ref: ${escapeHtml(booking?.bookingReference)}</span>
       </div>

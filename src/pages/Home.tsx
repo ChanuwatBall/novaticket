@@ -111,7 +111,7 @@ const Home = () => {
             const ltoken = liff.getAccessToken();
             if (!ltoken) return;
             const reslogin = await loginWithLine({ lineAccessToken: ltoken });
-            if (reslogin && reslogin.token) {
+            if (reslogin && reslogin.accessToken) {
               localStorage.setItem("user", JSON.stringify(reslogin));
               const refreshedUser = await getUserMe();
               if (refreshedUser && refreshedUser.id) {

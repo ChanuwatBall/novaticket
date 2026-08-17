@@ -1,5 +1,5 @@
 import { Button } from "@/components/ui/button";
-import { bookingDetail } from "@/services/api";
+import { bookingDetail, getAccessToken } from "@/services/api";
 import { getStoredCompany, loadCompany, storeCompany } from "@/lib/company";
 import { createTicketPdf, decodeTicketPayload } from "@/lib/ticketPdf";
 import { Loader2, Download, AlertCircle } from "lucide-react";
@@ -46,12 +46,12 @@ const ETicketPdfDownload = () => {
     }
 
     const userstr = localStorage.getItem("user");
-    const user = JSON.parse(userstr || "{}");
-    if (!user.token) {
+    const accessToken = getAccessToken();
+    if (!accessToken) {
       throw new Error("ไม่พบข้อมูลตั๋วสำหรับสร้าง PDF");
     }
 
-    const detail = await bookingDetail({ id: bookingref, token: user.token });
+    const detail = await bookingDetail({ id: bookingref, token: accessToken });
     if (detail?.error) {
       throw new Error(detail.message || detail.error);
     }

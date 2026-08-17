@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
-import { getUserMe, updateMyProfile } from "@/services/api";
+import { getUserMe, updateMyProfile, type CustomerProfileUpdate } from "@/services/api";
 import { cn } from "@/lib/utils";
 import { getDefaultOCRStatus, handleCardCaptured, maskThaiID, scanPassportOCR, scanThaiIdCardOCR } from "@/lib/OCR/ocr";
 import IDCardCamera from "@/lib/OCR/CameraPreview";
@@ -139,7 +139,16 @@ const handleCapture = async () => {
     e.preventDefault();
     setLoading(true);
     try {
-      const res = await updateMyProfile(form);
+      const payload: CustomerProfileUpdate = {
+        fullName: form.fullName,
+        phone: form.phone,
+        email: form.email,
+        avatarUrl: form.avatarUrl,
+        idType: form.idType,
+        idNumber: form.idNumber,
+        expiryDate: form.expiryDate,
+      };
+      const res = await updateMyProfile(payload);
       if (res && res.phone !== "" && res.email !== "") {
         toast({ title: "อัปเดตสำเร็จ!", description: "ข้อมูลโปรไฟล์ของคุณถูกบันทึกแล้ว" });
 

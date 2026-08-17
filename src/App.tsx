@@ -31,9 +31,9 @@ import NotFound from "./pages/NotFound";
 import BottomNav from "./components/BottomNav";
 import PromotionDetail from "./pages/PromotionDetail"; 
 import TrackBus from "./pages/TrackBus";
-import { getConfig, getPreferences, loginWithLine, refreshToken } from "./services/api";
-import { applyPreferences, resolvePreferences, storePreferences } from "./lib/preferences";
-import { applyRemoteLanguageResources } from "./i18n/remoteResources";
+import { getConfig, loginWithLine, refreshToken } from "./services/api";
+import { applyPreferences, configToPreferences, getStoredPreferences, storePreferences } from "./lib/preferences";
+import { getStoredCompany, storeCompanyConfig } from "./lib/company";
 
 const queryClient = new QueryClient();
 const LINE_AUTH_RETRY_KEY = "lineAuthRetryAttempted";
@@ -85,24 +85,36 @@ const App = () => {
   };
 
   useEffect(() => {
-    const initPreferences = async () => {
-      const response = await getPreferences();
-      const preferences = resolvePreferences(response);
+    const configPromise = getConfig().then((config) => {
+      const storedCompany = getStoredCompany();
+      const localVersion = Number(storedCompany?.config_version);
+      const remoteVersion = Number(config.config_version);
+      const hasLocalVersion = Number.isFinite(localVersion);
+      const hasRemoteVersion = Number.isFinite(remoteVersion);
+      const shouldUpdateConfig =
+        !hasLocalVersion ||
+        !hasRemoteVersion ||
+        remoteVersion > localVersion;
 
-      if (!preferences) {
-        console.error("Preferences fetch failed", response);
-        return;
+      if (shouldUpdateConfig) {
+        storeCompanyConfig(config);
+        const preferences = configToPreferences(config);
+        storePreferences(preferences);
+        applyPreferences(preferences);
+      } else if (!getStoredPreferences()) {
+        // Recover preferences if that storage entry was cleared independently.
+        const preferences = configToPreferences(storedCompany);
+        storePreferences(preferences);
+        applyPreferences(preferences);
       }
 
-      storePreferences(preferences);
-      applyRemoteLanguageResources(preferences.languageResources);
-      applyPreferences(preferences);
-    };
+      return config;
+    });
 
     if (shouldSkipLiffInit()) {
       console.log("Non-LIFF URL detected, skipping LIFF init");
       setIsInitializing(false);
-      initPreferences();
+      configPromise.catch((error) => console.error("Config initialization failed", error));
       return;
     }
 
@@ -114,7 +126,8 @@ const App = () => {
 
     const initLiff = async () => {
       try {
-        const config = await getConfig();
+        const config = await configPromise;
+        console.log("config ",config)
         const lineConfig = config.companyLineConfig;
 
         if (!lineConfig?.is_active) {
@@ -148,33 +161,37 @@ const App = () => {
         }
 
         try {
-          let [reslogin, profile] = await Promise.all([
+          const [initialLogin, profile] = await Promise.all([
             loginWithLine({ lineAccessToken: ltoken }),
             liff.getProfile(),
           ]);
+          let reslogin:any = initialLogin;
 
           console.log("Login and profile fetched", { reslogin, profile });
 
-          if (!reslogin || !reslogin.token) {
+          if (!reslogin || !reslogin?.accessToken) {
             const userStr = localStorage.getItem("user");
             if (userStr) {
               const userObj = JSON.parse(userStr);
-              if (userObj.refresh_token) {
+              if (userObj.refreshToken) {
                 console.log("Trying to refresh token...");
-                const refreshRes = await refreshToken({ refresh_token: userObj.refresh_token });
-                if (refreshRes && refreshRes.token) {
+                const refreshRes = await refreshToken({ refreshToken: userObj.refreshToken });
+                if (refreshRes && refreshRes.accessToken) {
                   reslogin = refreshRes;
                 }
               }
             }
           }
 
-          if (reslogin && reslogin.token) {
+          if (reslogin && reslogin.accessToken) {
             localStorage.setItem("user", JSON.stringify(reslogin));
             localStorage.setItem("userProfile", JSON.stringify(profile));
             sessionStorage.removeItem(LINE_AUTH_RETRY_KEY);
           } else {
             console.error("Backend login failed or returned invalid session", reslogin);
+            if (reslogin?.error === "LINE_AUTH_UNAVAILABLE") {
+              return;
+            }
             const alreadyRetried = sessionStorage.getItem(LINE_AUTH_RETRY_KEY) === "true";
             if (!alreadyRetried) {
               sessionStorage.setItem(LINE_AUTH_RETRY_KEY, "true");
@@ -195,7 +212,6 @@ const App = () => {
     };
 
     initLiff();
-    initPreferences();
     accesslocation();
 
     return () => clearTimeout(safetyTimer);

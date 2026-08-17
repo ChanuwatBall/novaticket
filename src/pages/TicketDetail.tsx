@@ -8,7 +8,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { QrCode, MapPin, Clock, Bus, User, CreditCard, ArrowLeft, Download, Mail, Phone, IdCard, AlertCircle, Check as CheckIcon, Navigation, ShoppingBag, Loader2 } from "lucide-react";
 import { useBookingStore } from "@/store/bookingStore";
 import { useEffect, useState } from "react";
-import { bookingDetail, cancelBooking, cancelCharge, checkinSelf, getProvinces, getTripDetail, searchTrips } from "@/services/api";
+import { bookingDetail, cancelBooking, cancelCharge, checkinSelf, getAccessToken, getProvinces, getTripDetail, searchTrips } from "@/services/api";
 import QRCode from "qrcode";
 import moment from "moment";
 import { useToast } from "@/components/ui/use-toast";
@@ -103,9 +103,10 @@ const TicketDetail = () => {
     try {
       const userstr = localStorage.getItem("user");
       const user = JSON.parse(userstr || "{}");
-      if (!user.token) return;
+      const accessToken = getAccessToken();
+      if (!accessToken) return;
 
-      const detail = await bookingDetail({ id: ticketId, token: user.token });
+      const detail = await bookingDetail({ id: ticketId, token: accessToken });
       console.log("booking id detail", detail);
       setTicket(detail);
 
