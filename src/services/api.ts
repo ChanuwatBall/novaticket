@@ -19,7 +19,7 @@ export const apiBaseUrl =
   typeof window !== "undefined" &&
   !Capacitor.isNativePlatform() &&
   isLocalOrLanHost(window.location.hostname)
-    ? "/"
+    ? "http://localhost:3001"
     : envBaseUrl;
 
 
@@ -641,8 +641,9 @@ export const validatePromo = async (promoCode: string, tripId: string) => {
 }
 
 export const getProvinces = async (routeId?: string) => {
-  return await api.get(`/api/provinces`, {
-    params: routeId ? { routeId } : {}
+  return await api.get(`/api/v1/customer/provinces`, {
+    params: routeId ? { routeId } : {} ,
+    headers: getAuthHeaders()
   })
     .then((res) => {
       console.log("getProvinces res ", res)

@@ -56,7 +56,7 @@ const Home = () => {
     const list = selectedRouteId
       ? provinces.filter((p) => p.region_id == selectedRouteId)
       : provinces;
-    return list?.filter((v, i, a) => a.findIndex(t => t.destination === v.destination) === i);
+    return  list.length > 0 ? list?.filter((v, i, a) => a.findIndex(t => t.destination === v.destination) === i) :[];
   }, [selectedRouteId, provinces]);
 
 
@@ -167,7 +167,7 @@ const Home = () => {
       try {
         const data = await getProvinces()
         console.log("provinces ", data)
-        setProvinces(data)
+        setProvinces(data?.data)
       } catch (error) {
         throw error
       }
@@ -727,7 +727,7 @@ const Home = () => {
               onSwiper={(swiper) => console.log(swiper)}
             >
               {
-                promotions && promotions.map((promo) =>
+                promotions && promotions.length > 0 && promotions?.map((promo) =>
                   <SwiperSlide className="text-left" key={promo.id}>
                     <div
                       onClick={() => navigate(`/promotions/${promo.id}`)}
