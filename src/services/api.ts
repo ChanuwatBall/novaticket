@@ -375,7 +375,7 @@ export const tripSeatsLayout = async (tripid: string) => {
 }
 
 export const getTripDetail = async (tripid: string) => {
-  return await api.get(`/api/trips/${tripid}`)
+  return await api.get(`/api/v1/customer/trips/${tripid}`)
     .then((res) => {
       console.log("tripDetail res ", res)
       return res.data
@@ -701,10 +701,10 @@ export const searchTrips = async (body: {
   passengerCount?: number;
   sort?: "asc" | "desc";
 }) => {
-  return await api.post(`/api/trips`, body)
+  return await api.post(`/api/v1/customer/trips/search`, body)
     .then((res) => {
       console.log("searchTrips res ", res)
-      return (res.data || []).map(normalizeTrip)
+      return (res.data?.data || []).map(normalizeTrip)
     })
     .catch((err) => {
       console.log("searchTrips err ", err)
@@ -741,12 +741,13 @@ export const getBoardingPoints = async (provinceId?: string) => {
     })
 }
 export const getBusStops = async (routeId: string, routeMeta?: { originProvinceId?: string; destinationProvinceId?: string; origin?: string; destination?: string }) => {
-  return await api.get(`/api/bus-stops`, {
-    params: { routeId }
+  return await api.get(`/api/v1/customer/bus-stops`, {
+    params: { routeId },
+    headers: getAuthHeaders()
   })
     .then((res) => {
       console.log("getBusStops res ", res)
-      return (res.data || []).map((stop: any) => ({
+      return (res.data?.data || []).map((stop: any) => ({
         ...stop,
         order: stop.stopOrder,
         route_id: {

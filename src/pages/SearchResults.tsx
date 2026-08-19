@@ -154,7 +154,7 @@ const SearchResults = () => {
                         <span className="text-muted-foreground">→</span>
                         <span className="text-lg font-bold">{trip.arrival_time}</span>
                       </div>
-                      <span className="text-xl font-bold text-primary">฿{trip.price}</span>
+                      <span className="text-xl font-bold text-primary">฿{trip.startingFare}</span>
                     </div>
                     <div className="flex items-center gap-2 flex-wrap">
                       <Badge variant="secondary">{trip.trip_type}</Badge>

@@ -10,6 +10,8 @@ import { t } from "i18next";
 
 interface SeatSelectionSectionProps {
   onContinue: () => void;
+  tripDetail: any
+  setTripDetail: (e) => void;
 }
 
 const statusColors: Record<SeatStatus, string> = {
@@ -28,12 +30,12 @@ const specialCellLabels: Record<string, string> = {
   STAIRS: "บันได",
 };
 
-const SeatSelectionSection = ({ onContinue }: SeatSelectionSectionProps) => {
+const SeatSelectionSection = ({ onContinue ,tripDetail,setTripDetail}: SeatSelectionSectionProps) => {
   const store = useBookingStore();
   const trip = store.selectedTrip;
   const [layout, setLayout] = useState<BusLayout | null>(null);
   const [seats, setSeats] = useState<Seat[]>([]);
-  const [tripDetail, setTripDetail] = useState<TripDetail | null>(null);
+  // const [tripDetail, setTripDetail] = useState<TripDetail | null>(null);
   const [loading, setLoading] = useState(true);
 
   const selectedSeats = useMemo(() => seats.filter((s) => s.status === "selected"), [seats]);
@@ -59,6 +61,7 @@ const SeatSelectionSection = ({ onContinue }: SeatSelectionSectionProps) => {
           tripSeatsLayout(trip.id),
           getTripDetail(trip.id)
         ]);
+        console.log("tdetail ",tdetail)
 
         if (tripData && tripData.layout) {
           setLayout(tripData.layout);

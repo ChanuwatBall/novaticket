@@ -212,7 +212,7 @@ const SearchResultsSection = ({ onSelectTrip }: SearchResultsSectionProps) => {
                           </div>
 
                           <div className="flex flex-col items-end justify-center h-full min-w-[80px]">
-                            <span className="text-xl font-black text-primary leading-none">฿{trip.fare}</span>
+                            <span className="text-md mt-2 font-black text-primary leading-none">฿{trip.startingFare}</span>
                             <Badge variant="secondary" className="h-5 px-2 text-[9px] text-slate-400 font-bold bg-slate-100/50 hover:bg-slate-100">
                               ({t("ว่าง")}) {trip.available_seats} {t("ที่นั่ง")}
                             </Badge>

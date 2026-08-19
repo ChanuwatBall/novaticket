@@ -215,20 +215,24 @@ const Home = () => {
       console.log("store.originProvinceId   ", store.originProvinceId);
       console.log("store.destinationProvinceId   ", store.destinationProvinceId);
       if (store.originProvinceId && store.destinationProvinceId) {
-        const matchedRouteId = await supabase
-          .from('routes')
-          .select('id')
-          .eq('origin_id', store.originProvinceId.id)
-          .eq('destination_id', store.destinationProvinceId.id)
-          .single()
-          .then((response) => {
-            if (response.error) {
-              console.error("Error fetching matched route ID:", response.error);
-              return null;
-            }
-            return response.data?.id || null;
-          });
+        const routids = store.originProvinceId.routeIds.filter(id => store.destinationProvinceId.routeIds.includes(id));
+        console.log("routids ",routids)
+        const matchedRouteId = routids[0]
+        // const matchedRouteId = await supabase
+        //   .from('routes')
+        //   .select('id')
+        //   .eq('origin_id', store.originProvinceId.id)
+        //   .eq('destination_id', store.destinationProvinceId.id)
+        //   .single()
+        //   .then((response) => {
+        //     if (response.error) {
+        //       console.error("Error fetching matched route ID:", response.error);
+        //       return null;
+        //     }
+        //     return response.data?.id || null;
+        //   });
 
+          
         console.log("matchedRouteId ", matchedRouteId)
         if (matchedRouteId) {
           try {
