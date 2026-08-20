@@ -11,13 +11,26 @@ export interface PassengerInfo {
 }
 
 export interface MealItem {
-  id: string;
-  name: string;
-  nameEn: string;
-  price: number;
-  category:  string;
-  imageUrl: string | null;
-  stockLeft: number;
+  // id: string;
+  // name: string;
+  // nameEn: string;
+  // price: number;
+  // category:  string;
+  // imageUrl: string | null;
+  // stockLeft: number;
+ 
+    "id": string
+    "imageUrl":string
+    "productId": string
+    "title": string
+    "description": string
+    "unitPrice": string
+    "currency": string
+    "stock": null,
+    "active": true,
+    "categoryId": string
+    "categoryName": string
+ 
 }
 
 export interface MealSelection {

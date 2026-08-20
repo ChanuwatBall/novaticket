@@ -178,10 +178,10 @@ const PassengerInfoSection = ({ onContinue }: PassengerInfoSectionProps) => {
   const getMealTotal = (seatId: string) => {
     const m = getMeal(seatId);
     if (!m) return 0;
-    return m.items.reduce((s, it) => s + (it.item.price * it.qty), 0);
+    return m.items.reduce((s, it) => s + (Number(it.item.unitPrice)  * it.qty), 0);
   };
 
-  const totalMealCost = mealAddons.reduce((sum, m) => sum + m.items.reduce((s, it) => s + (it.item.price * it.qty), 0), 0);
+  const totalMealCost = mealAddons.reduce((sum, m) => sum + m.items.reduce((s, it) => s + (Number(it.item.unitPrice) * it.qty), 0), 0);
 
   const calculateSubtotal = () => passengers.length * tripPrice;
 
@@ -334,7 +334,7 @@ const PassengerInfoSection = ({ onContinue }: PassengerInfoSectionProps) => {
                       {meal && (mealTotal > 0) ? (
                         <div className="mt-2 space-y-1">
                           {meal.items.map(it => (
-                            <div key={it.item.id} className="flex justify-between text-[11px]"><span className="text-muted-foreground">{it.item.name} x{it.qty}</span><span className="font-bold text-primary">฿{(it.item.price * it.qty).toLocaleString()}</span></div>
+                            <div key={it.item.id} className="flex justify-between text-[11px]"><span className="text-muted-foreground">{it.item.title} x{it.qty}</span><span className="font-bold text-primary">฿{(Number(it.item.unitPrice)  * it.qty).toLocaleString()}</span></div>
                           ))}
                           <div className="flex justify-between text-[11px] font-extrabold pt-1 border-t border-primary/20">
                             <span className="text-primary">{t("รวม")}</span>
@@ -366,7 +366,7 @@ const PassengerInfoSection = ({ onContinue }: PassengerInfoSectionProps) => {
           </div>
 
           <div className="flex gap-3 overflow-x-auto pb-4 mb-4 -mx-1 px-1 scrollbar-hide">
-            {promotions.map((promo) => (
+            {promotions && promotions.length > 0 && promotions.map((promo) => (
               <div
                 key={promo.id}
                 onClick={() => { setPromoInput(promo.promoCode); setPromoError(""); setPromoApplied(false);  }}

@@ -42,14 +42,14 @@ export default function MealModal({ open, onClose, seatNumber, passengerName, in
     const groups = new Map<string, MealItem[]>();
 
     mealsMenu.forEach((item) => {
-      const category = item.category?.trim() || "อื่นๆ";
+      const category = item.categoryName?.trim() || "อื่นๆ";
       groups.set(category, [...(groups.get(category) ?? []), item]);
     });
 
     return Array.from(groups, ([category, items]) => ({ category, items }));
   }, [mealsMenu]);
 
-  const total = selected.reduce((s, it) => s + (it.item.price * it.qty), 0);
+  const total = selected.reduce((s, it) => s + (Number(it.item.unitPrice )* it.qty), 0);
 
   const scrollToCategory = (category: string) => {
     const list = listRef.current;
@@ -138,19 +138,19 @@ export default function MealModal({ open, onClose, seatNumber, passengerName, in
                     >
                       <div className="flex items-center gap-3">
                         {
-                           item?.imageUrl ? <img src={item.imageUrl} alt={item.name}  style={{width:"4rem"}} />  :
+                           item?.imageUrl ? <img src={item.imageUrl} alt={item.title}  style={{width:"4rem"}} />  :
                         <div style={{width:"4rem" ,height:"2rem"}} className={`  rounded-full flex items-center justify-center ${qty > 0 ? "bg-primary/10" : "bg-slate-100"}`}>
                           {qty > 0 ? <Check className={`h-4 w-4 text-primary`} /> :
-                          item.category === "beverage" ? <ShoppingBag className="h-4 w-4 text-muted-foreground" /> :
+                          item.categoryName === "beverage" ? <ShoppingBag className="h-4 w-4 text-muted-foreground" /> :
                           
                            <ShoppingBag className="h-4 w-4 text-muted-foreground" />}
                         </div>}
                         <span className="font-medium text-sm">
-                          {t(item.name)} <br/>
+                          {t(item.title)} <br/>
                           {/* <Badge variant="outline" className={`font-bold text-xs ${qty > 0 ? `text-primary border-primary` : ""}`}>
                           ฿{item.price}
                         </Badge> */}
-                         ฿{item.price}
+                         ฿{item.unitPrice}
                         </span>
                       </div>
                       <div className="flex items-center gap-2">
@@ -184,8 +184,8 @@ export default function MealModal({ open, onClose, seatNumber, passengerName, in
                 <div className="space-y-1">
                   {selected.map(it => (
                     <div key={it.item.id} className="flex justify-between gap-3 text-sm">
-                      <span className="truncate">{t(it.item.name)} x{it.qty}</span>
-                      <span className="font-bold text-primary">฿{(it.item.price * it.qty).toLocaleString()}</span>
+                      <span className="truncate">{t(it.item.title)} x{it.qty}</span>
+                      <span className="font-bold text-primary">฿{(Number(it.item.unitPrice) * it.qty).toLocaleString()}</span>
                     </div>
                   ))}
                 </div>

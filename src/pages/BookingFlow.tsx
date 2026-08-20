@@ -14,7 +14,7 @@ const BookingFlow = () => {
   const navigate = useNavigate();
   const store = useBookingStore();
   const [currentStep, setCurrentStep] = useState(1);
-  const [tripDetail,setTripDetail] = useState<any>(null)
+  const [tripDetail, setTripDetail] = useState<any>(null);
 
   // Refs for scrolling
   const step2Ref = useRef<HTMLDivElement>(null);
@@ -58,12 +58,19 @@ const BookingFlow = () => {
     3: t("ชำระเงิน")
   };
 
-  const searchTrip=async (trip)=>{
-    const tdetail= await getTripDetail(trip.id)
-    setTripDetail(tdetail) 
-    console.log("store.selectedTrip ",store.selectedTrip)
-    setTimeout(() => scrollTo(step2Ref), 100);
-  }
+  const searchTrip = async (trip: any) => {
+    setTripDetail(null);
+    try {
+      const detail = await getTripDetail(trip.id);
+      setTripDetail(detail);
+    } catch (error) {
+      console.error("get trip detail error", error);
+    } finally {
+      // The seat section is rendered as soon as selectedTrip is set; scroll
+      // after that render so the next booking step is visible to the user.
+      setTimeout(() => scrollTo(step2Ref), 100);
+    }
+  };
 
   return (
     <BookingLayout currentStep={currentStep} title={stepTitles[currentStep] || t("จองตั๋ว")}>
@@ -73,7 +80,7 @@ const BookingFlow = () => {
           <SearchResultsSection
             onSelectTrip={(trip) => {
               store.setSelectedTrip(trip);
-              searchTrip(trip)
+              void searchTrip(trip)
             }}
           />
         </div>
@@ -83,7 +90,7 @@ const BookingFlow = () => {
           <div id="step-2" ref={step2Ref} className="scroll-mt-32 py-4 border-t border-slate-100">
             <SeatSelectionSection
               tripDetail={tripDetail}
-              setTripDetail={(e)=>{}}
+              setTripDetail={setTripDetail}
               onContinue={() => {
                 setTimeout(() => scrollTo(step3Ref), 100);
               }}

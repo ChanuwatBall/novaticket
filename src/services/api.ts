@@ -319,7 +319,7 @@ export const getPromotionsTrip = async ( params?: any) => {
 
 export const getAddons = async (id: string,page: number, limit: number) => {
   // curl '/api/trips/{id}/add-ons'
-  return api.get(`/api/trips/${id}/add-ons`, {
+  return api.get(`/api/v1/customer/trips/${id}/add-ons`, {
     params: { page, limit },
     headers: getAuthHeaders()
   })
@@ -362,11 +362,11 @@ export const bookingDetail = async ({ id, token }: any) => {
     })
 }
 export const tripSeatsLayout = async (tripid: string) => {
-  // curl '/api/trips/{id}/seats'
-  return await api.get(`/api/trips/${tripid}/seats`)
+  // Customer booking API returns the payload under `data`.
+  return await api.get(`/api/v1/customer/trips/${tripid}/seats`)
     .then((res) => {
       console.log("tripSeatsLayout res ", res)
-      return res.data
+      return unwrapData(res)
     })
     .catch((err) => {
       console.log("tripSeatsLayout err ", err)
@@ -378,7 +378,7 @@ export const getTripDetail = async (tripid: string) => {
   return await api.get(`/api/v1/customer/trips/${tripid}`)
     .then((res) => {
       console.log("tripDetail res ", res)
-      return res.data
+      return unwrapData(res)
     })
     .catch((err) => {
       console.log("tripDetail err ", err)
