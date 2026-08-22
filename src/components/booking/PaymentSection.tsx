@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo } from "react";
+import { useState, useCallback, useMemo, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useBookingStore } from "@/store/bookingStore";
 import { Button } from "@/components/ui/button";
@@ -9,18 +9,7 @@ import { Label } from "@/components/ui/label";
 import { QrCode, Wallet, ChevronDown, Bus } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { t } from "i18next";
-
-const eWalletOptions = [
-  { value: "wechat_pay_mpm", label: "WeChatPay", sublabel: "QR Code", icon: "/assets/icon/wechat.svg" },
-];
-
-const getPassengerMultiplier = (type: string) => {
-  switch (type) {
-    case "child": return 0.5;
-    case "monk": return 0.8;
-    default: return 1.0;
-  }
-};
+import { paymentMethods } from "@/services/api";
 
 const getCompanySalesSettings = () => {
   try {
@@ -43,12 +32,35 @@ const PaymentSection = () => {
   const store = useBookingStore();
   const [eWalletExpanded, setEWalletExpanded] = useState(false);
   const [selectedEWallet, setSelectedEWallet] = useState("");
+  const [paymentsMethods, setPaymentsMethods] = useState<any[]>([]);
 
-  const tripPrice = store.selectedTrip?.fare ?? 0;
+  useEffect(() => {
+    const loadPaymentMethods = async () => {
+      const res = await paymentMethods();
+      setPaymentsMethods(Array.isArray(res) ? res : []);
+    };
+
+    loadPaymentMethods();
+  }, []);
+
+  const qrPaymentGroup = paymentsMethods.find(({ group }) => group === "qr_payment");
+  const eWalletGroups = paymentsMethods.filter(({ group }) => group !== "qr_payment");
+  const eWalletOptions = eWalletGroups.flatMap(({ methods = [] }) => methods);
+
   const subtotal = store.passengers.reduce((sum, p) => {
-    return sum + (tripPrice * getPassengerMultiplier(p.passengerType));
+    const fare = store.selectedTrip?.fares?.find(
+      ({ passenger_type }) => passenger_type === p.passengerType,
+    );
+
+    return sum + toNumber(fare?.amount);
   }, 0);
-  const totalMealCost = store.mealAddons.reduce((sum, m) => sum + m.items.reduce((s, it) => s + (it.item.price * it.qty), 0), 0);
+  const totalMealCost = store.mealAddons.reduce(
+    (sum, meal) => sum + meal.items.reduce(
+      (mealSum, selection) => mealSum + toNumber(selection.item.unitPrice) * selection.qty,
+      0,
+    ),
+    0,
+  );
 
   const companySalesSettings = useMemo(() => getCompanySalesSettings(), []);
   const baseTotal = Math.max(0, (subtotal + totalMealCost) - store.discount);
@@ -90,9 +102,9 @@ const PaymentSection = () => {
         origin: store.originProvinceId?.name,
         destination: store.destinationProvinceId?.name,
         date: store.travelDate,
-        time: store.selectedTrip?.departure_time,
-        arrive: store.selectedTrip?.arrival_time,
-        busType: store.selectedTrip?.bus_type_id?.name,
+        time: store.selectedTrip?.trip?.departureTime,
+        arrive: store.selectedTrip?.trip?.arrivalTime,
+        busType: store.selectedTrip?.trip?.vehicleType,
         boardingPoint: store.boardingPointId?.name,
         dropOffPoint: store.dropOffPointId?.name,
       },
@@ -109,7 +121,7 @@ const PaymentSection = () => {
     console.log(" ConfirmPayment mealAddons ", store.mealAddons)
     const addons = await setupmeal(store.mealAddons)
     const body = {
-      tripId: store.selectedTrip?.id,
+      tripId: store.selectedTrip?.trip?.id,
       travelDate: store.travelDate,
       originProvinceId: store.originProvinceId?.id,
       destinationProvinceId: store.destinationProvinceId?.id,
@@ -119,9 +131,10 @@ const PaymentSection = () => {
       promoCode: store.promoCode,
       addOns: addons
     };
+    console.log("new booking body:" , body)
 
-    const sourceType = store.paymentMethod === "qr" ? "promptpay" : selectedEWallet;
-    navigate("/payment/qr", { state: { bookingBody: body, sourceType, total, bookingDetail } });
+    // const sourceType = store.paymentMethod === "qr" ? "promptpay" : selectedEWallet;
+    // navigate("/payment/qr", { state: { bookingBody: body, sourceType, total, bookingDetail } });
   }, [navigate, store, total, subtotal, selectedEWallet]);
 
   return (
@@ -134,19 +147,19 @@ const PaymentSection = () => {
             <h4 className="font-bold text-primary flex items-center gap-2">
               <Bus className="h-4 w-4" /> {t("รายละเอียดการเดินทาง")}
             </h4>
-            <Badge variant="outline" className="bg-white">{store.selectedTrip?.bus_type_id?.name}</Badge>
+            <Badge variant="outline" className="bg-white">{store.selectedTrip?.trip?.vehicleType}</Badge>
           </div>
 
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-1">
               <p className="text-[10px] uppercase text-muted-foreground font-bold leading-none">{t("ต้นทาง")} ({store.originProvinceId?.name})</p>
               <p className="text-[13px] font-bold leading-tight">{store.boardingPointId?.name || t("จุดขึ้นรถหลัก")}</p>
-              <p className="text-xs text-primary font-bold">{store.selectedTrip?.departure_time}</p>
+              <p className="text-xs text-primary font-bold">{store.selectedTrip?.trip?.departureTime}</p>
             </div>
             <div className="space-y-1 text-right">
               <p className="text-[10px] uppercase text-muted-foreground font-bold leading-none">{t("ปลายทาง")} ({store.destinationProvinceId?.name})</p>
               <p className="text-[13px] font-bold leading-tight">{store.dropOffPointId?.name || t("จุดลงรถหลัก")}</p>
-              <p className="text-xs text-primary font-bold">{store.selectedTrip?.arrival_time}</p>
+              <p className="text-xs text-primary font-bold">{store.selectedTrip?.trip?.arrivalTime}</p>
             </div>
           </div>
 
@@ -156,7 +169,12 @@ const PaymentSection = () => {
             {store?.mealAddons && (totalMealCost > 0) && (
               <div className="mt-2 space-y-1">
                 {store?.mealAddons.map(addon => addon.items).flat().map(it => (
-                  <div key={it.item.id} className="flex justify-between text-[11px]"><span className="text-muted-foreground">{t(it.item.name)} x{it.qty}</span><span className="font-bold text-primary">฿{(it.item.price * it.qty).toLocaleString()}</span></div>
+                  <div key={it.item.id} className="flex justify-between text-[11px]">
+                    <span className="text-muted-foreground">{t(it.item.title)} x{it.qty}</span>
+                    <span className="font-bold text-primary">
+                      ฿{(toNumber(it.item.unitPrice) * it.qty).toLocaleString()}
+                    </span>
+                  </div>
                 ))}
                 {/* <div className="flex justify-between text-[11px] font-extrabold pt-1 border-t border-primary/20">
                   <span className="text-primary">รวมอาหาร</span>
@@ -225,30 +243,35 @@ const PaymentSection = () => {
 
       <div className="space-y-3">
         <label className="text-sm font-bold">{t("เลือกวิธีชำระเงิน")}</label>
+       
         <RadioGroup
           value={store.paymentMethod}
           onValueChange={handlePaymentMethodChange}
           className="space-y-3"
         >
-          <div className="flex items-center space-x-3 p-3 rounded-lg border border-border hover:bg-accent/50 transition-colors">
-            <RadioGroupItem value="qr" id="qr-flow" />
-            <Label htmlFor="qr-flow" className="flex items-center gap-2 cursor-pointer flex-1">
-              <QrCode className="h-5 w-5 text-primary" />
-              <div>
-                <div className="font-medium">{t("QR PromptPay")}</div>
-                <div className="text-[10px] text-muted-foreground">{t("สแกนจ่ายผ่าน Mobile Banking")}</div>
-              </div>
-            </Label>
-          </div>
+          {qrPaymentGroup && (
+            <div className="flex items-center space-x-3 p-3 rounded-lg border border-border hover:bg-accent/50 transition-colors">
+              <RadioGroupItem value="qr" id="qr-flow" />
+              <Label htmlFor="qr-flow" className="flex items-center gap-2 cursor-pointer flex-1">
+                <QrCode className="h-5 w-5 text-primary" />
+                <div>
+                  <div className="font-medium">{t(qrPaymentGroup.groupName || "QR PromptPay")}</div>
+                  <div className="text-[10px] text-muted-foreground">{t("สแกนจ่ายผ่าน Mobile Banking")}</div>
+                </div>
+              </Label>
+            </div>
+          )}
 
-          <div className="rounded-lg border border-border overflow-hidden">
+          {eWalletOptions.length > 0 && <div className="rounded-lg border border-border overflow-hidden">
             <div className="flex items-center space-x-3 p-3 hover:bg-accent/50 transition-colors">
               <RadioGroupItem value="wallet" id="wallet-flow" />
               <Label htmlFor="wallet-flow" className="flex items-center gap-2 cursor-pointer flex-1">
                 <Wallet className="h-5 w-5 text-primary" />
                 <div className="flex-1">
-                  <div className="font-medium">{t("E-Wallet")}</div>
-                  <div className="text-[10px] text-muted-foreground">{t("ชำระด้วย WeChat Pay")}</div>
+                  <div className="font-medium">{t(eWalletGroups[0]?.groupName || "E-Wallet")}</div>
+                  <div className="text-[10px] text-muted-foreground">
+                    {t(eWalletOptions.map((method: any) => method.name).filter(Boolean).join(", "))}
+                  </div>
                 </div>
               </Label>
               {store.paymentMethod === "wallet" && (
@@ -259,16 +282,16 @@ const PaymentSection = () => {
             <AnimatePresence>
               {store.paymentMethod === "wallet" && eWalletExpanded && (
                 <motion.div initial={{ height: 0 }} animate={{ height: "auto" }} exit={{ height: 0 }} className="overflow-hidden border-t px-3 pb-3 pt-2 bg-slate-50">
-                  {eWalletOptions.map(opt => (
-                    <button key={opt.value} onClick={() => setSelectedEWallet(opt.value)} className={`w-full flex items-center gap-3 p-2 rounded-lg border text-left ${selectedEWallet === opt.value ? 'border-primary bg-white ring-1 ring-primary' : 'bg-transparent border-transparent'}`}>
-                      <img src={opt.icon} className="h-6 w-6" alt="" />
-                      <span className="text-sm font-medium">{opt.label}</span>
+                  {eWalletOptions.map((opt: any) => (
+                    <button key={opt.source} onClick={() => setSelectedEWallet(opt.source)} className={`w-full flex items-center gap-3 p-2 rounded-lg border text-left ${selectedEWallet === opt.source ? 'border-primary bg-white ring-1 ring-primary' : 'bg-transparent border-transparent'}`}>
+                      {opt.icon && <img src={opt.icon} className="h-6 w-6" alt="" />}
+                      <span className="text-sm font-medium">{t(opt.name || opt.source)}</span>
                     </button>
                   ))}
                 </motion.div>
               )}
             </AnimatePresence>
-          </div>
+          </div>}
         </RadioGroup>
       </div>
 

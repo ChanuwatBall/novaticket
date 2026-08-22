@@ -33,7 +33,23 @@ import { t } from "i18next";
 interface SearchResultsSectionProps {
   onSelectTrip: (trip: any) => void;
 }
-
+interface TripResult  {
+    "id": string
+    "routeId": string
+    "routeName": string
+    "originStationId": string
+    "destinationStationId": string
+    "origin": string
+    "destination": string
+    "serviceDate": string
+    "departureTime": string
+    "arrivalTime": string
+    "vehicleType": string
+    "totalSeats": number
+    "availableSeats": number
+    "startingFare": string
+    "status": string
+}[]
 const SearchResultsSection = ({ onSelectTrip }: SearchResultsSectionProps) => {
   const store = useBookingStore();
   const [trips, setTrips] = useState<any[]>([]);
@@ -171,7 +187,7 @@ const SearchResultsSection = ({ onSelectTrip }: SearchResultsSectionProps) => {
                     value={trip.id}
                     className={cn(
                       "border rounded-2xl bg-card overflow-hidden transition-all duration-300",
-                      store.selectedTrip?.id === trip.id ? "ring-2 ring-primary border-primary shadow-lg" : "hover:border-primary/40 shadow-sm border-slate-200"
+                      store.selectedTrip?.trip?.id === trip.id ? "ring-2 ring-primary border-primary shadow-lg" : "hover:border-primary/40 shadow-sm border-slate-200"
                     )}
                   >
                     <AccordionTrigger className="hover:no-underline p-0 [&>svg]:hidden w-full group">
@@ -224,7 +240,7 @@ const SearchResultsSection = ({ onSelectTrip }: SearchResultsSectionProps) => {
                         <div className="flex items-center justify-between pt-3 border-t border-slate-50">
 
                           <div className="flex items-center gap-1.5 text-[10px] font-bold text-primary">
-                            {t("ดูรายละเอียด")} <ChevronRight className={cn("h-3 w-3 transition-transform duration-300", store.selectedTrip?.id === trip.id ? "rotate-90" : "")} />
+                            {t("ดูรายละเอียด")} <ChevronRight className={cn("h-3 w-3 transition-transform duration-300", store.selectedTrip?.trip?.id === trip.id ? "rotate-90" : "")} />
                           </div>
                         </div>
                       </div>
@@ -323,7 +339,9 @@ const SearchResultsSection = ({ onSelectTrip }: SearchResultsSectionProps) => {
                         {/* Select Button */}
                         <div className="flex justify-end pt-2">
                           <Button
-                            onClick={() => onSelectTrip(trip)}
+                            onClick={() =>{
+                               onSelectTrip(trip)
+                            }}
                             className="rounded-full px-10 h-12 text-base font-black shadow-lg shadow-primary/25 active:scale-95 transition-all"
                           >
                             {t("เลือกเที่ยวนี้")}

@@ -235,6 +235,36 @@ export const logout = async () => {
     })
 }
 
+// curl -X 'GET' \
+  // 'http://localhost:3001/api/v1/customer/payment-methods' \
+  // -H 'accept: */*'
+export const paymentMethods=async()=>{
+
+  return await api.get("/api/v1/customer/payment-methods").then((res)=>{
+    console.log("payment-methods  res ",res)
+    return res.data?.data
+  }).catch(err =>{
+    console.log("payment-methods err ",err)
+    return [
+      {
+      "group": "qr_payment",
+      "groupName": "QR PromptPay",
+      "methods": [
+        { 
+          "source": "promptpay",
+          "group": "qr_payment",
+          "groupName": "QR PromptPay",
+          "name": "QR PromptPay",
+          "fee": 0,
+          "onlineEnabled": true,
+          "offlineEnabled": false
+        }
+      ]
+    },
+    ]
+  })
+}
+
 export type NewBooking = {
   "tripId": string,
   "travelDate": string,
@@ -256,7 +286,7 @@ export type NewBooking = {
   "addOns":any[]
 }
 export const createBooking = async (body: NewBooking) => {
-  return await api.post("/api/bookings", body, {
+  return await api.post("/api/v1/customer/bookings", body, {
     headers: getAuthHeaders()
   })
     .then((res) => {
@@ -300,11 +330,10 @@ export const updatePassengerLocation = async (tripId: string, body: { latitude: 
     })
 }
 
-export const getPromotionsTrip = async ( params?: any) => {
-   //curl '/api/promotions?memberOnly=&visibility=&routeId=&dayOfWeek=&time=&phone=' \
-  // --header 'Authorization: Bearer YOUR_SECRET_TOKEN'
-  return await api.get(`/api/promotions`, {
-    params: params || {}
+export const getPromotionsTrip = async ( params?: any) => { 
+  return await api.get(`/api/v1/customer/promotions`, {
+    params: params || {} ,
+    headers: getAuthHeaders()
   })
     .then((res) => {
       console.log("getPromotions res ", res)
@@ -386,6 +415,34 @@ export const getTripDetail = async (tripid: string) => {
     })
 }
 
+///api/v1/passenger-types
+export const getPassengerType= async()=>{
+  return await api.get("/api/v1/customer/passenger-types",{
+    params:{
+      requiresDocument:false,
+      status:"active" ,
+      limit:50,
+      offset:0
+    }
+  }).then(
+    (res) =>{
+      console.log("getPassengerType res ",res)
+      return res.data?.data
+    }
+  ).catch(err =>{
+    console.log("getPassengerType err ",err)
+    return [{
+        "id": "be2a30d0-ef13-491a-89fc-58ff3a9cf537",
+        "code": "adult",
+        "name": "ทั่วไป",
+        "nameEn": null,
+        "description": "ผู้โดยสารทั่วไป",
+        "requiresDocument": false,
+        "sortOrder": 30,
+        "status": "active"
+    }]
+  })
+}
 
 export const chargeWechatPayment = async (amount: any) => {
   return await api.post("/api/payment/wechat-pay", {
@@ -592,7 +649,7 @@ export const createComplaint = async (body: {
 };
 
 export const getPromotions = async (params?: { memberOnly?: string; visibility?: string; routeId?: string; dayOfWeek?: string }) => {
-  return await api.get(`/api/promotions`, {
+  return await api.get(`/api/v1/customer/promotions`, {
     params: params || {}
   })
     .then((res) => {
@@ -606,7 +663,7 @@ export const getPromotions = async (params?: { memberOnly?: string; visibility?:
 }
 
 export const getPromotionDetail = async (id: string) => {
-  return await api.get(`/api/promotions/${id}`)
+  return await api.get(`/api/v1/customer/promotions/${id}`)
     .then((res) => {
       console.log("getPromotionDetail res ", res)
       return res.data
@@ -617,16 +674,9 @@ export const getPromotionDetail = async (id: string) => {
     })
 }
 
-// curl https://nova-api.rubyclaw.tech/api/promotions/validate \
-//   --request POST \
-//   --header 'Content-Type: application/json' \
-//   --data '{
-//   "promoCode": "",
-//   "tripId": ""
-// }'
-
+ 
 export const validatePromo = async (promoCode: string, tripId: string) => {
-  return await api.post(`/api/promotions/validate`, {
+  return await api.post(`/api/v1/customer/promotions/validate`, {
     promoCode,
     tripId
   })
@@ -804,25 +854,65 @@ export interface BoardingPoint {
 //   passengerCount?: number;
 // }
 
+// export interface Trip {
+//   id: string;
+//   route_id: string;
+//   origin_province_id: string;
+//   destination_province_id: string;
+//   departure_time: string;
+//   arrival_time: string;
+//   price: number;
+//   available_seats: number;
+//   total_seats: number;
+//   trip_type: string;
+//   bus_type_id: {
+//     id: string;
+//     name: string;
+//   };
+//   date: string;
+//   origin: string;
+//   destination: string;
+//   fare: number;
+// }
 export interface Trip {
-  id: string;
-  route_id: string;
-  origin_province_id: string;
-  destination_province_id: string;
-  departure_time: string;
-  arrival_time: string;
-  price: number;
-  available_seats: number;
-  total_seats: number;
-  trip_type: string;
-  bus_type_id: {
-    id: string;
-    name: string;
-  };
-  date: string;
-  origin: string;
-  destination: string;
-  fare: number;
+    "trip": {
+        "id":  string
+        "routeId": string
+        "serviceDate": string
+        "departureTime": string
+        "arrivalTime":string
+        "vehicleType": string
+        "status": string
+        "routeName": string
+        "originStationId": string
+        "destinationStationId":string
+        "default_amount": number
+    },
+    "stops":  {
+      "stationId": string
+            "name": string
+            "stopOrder":  number
+            "latitude": string
+            "longitude":string
+    }[]
+    "passengerTypes":{
+            "code":string
+            "name": string
+            "description": string
+        }[]
+    "fares":{
+            "origin_station_id": string
+            "destination_station_id": string
+            "passenger_type": string
+            "amount": string | number
+            "name": string ,
+            "description":string
+     }[]
+    "salesSettings": {
+        "blockSalesAfterDeparture":  boolean
+        "allowSalesWithoutAssignment": boolean,
+        "ticketTerms": string
+    }
 }
 
 // // ─────────────────────────────────────────────
@@ -955,200 +1045,7 @@ export interface CreateChargeResponse {
   status: string;
   expiresAt: string;
 }
-
-// export interface ChargeStatusResponse {
-//   chargeId: string;
-//   status: "pending" | "success" | "failed" | "expired";
-//   paidAt?: string;
-// }
-
-// export interface TransactionDetail {
-//   id: string;
-//   status: string;
-//   amount: number;
-//   currency: string;
-//   source?: {
-//     scannable_code?: {
-//       image?: {
-//         download_uri: string;
-//       };
-//     };
-//   };
-// }
-
-// // ─────────────────────────────────────────────
-// // Interfaces — User & Auth
-// // ─────────────────────────────────────────────
-// export interface LoginPayload {
-//   email: string;
-//   password: string;
-// }
-
-// export interface RegisterPayload {
-//   fullName: string;
-//   phone: string;
-//   email: string;
-//   password: string;
-// }
-
-// export interface AuthResponse {
-//   token: string;
-//   user: UserProfile;
-// }
-
-// export interface UserProfile {
-//   id: string;
-//   fullName: string;
-//   phone: string;
-//   email: string;
-//   lineUserId?: string;
-//   avatarUrl?: string;
-//   points: number;
-//   walletBalance: number;
-//   memberSince: string;
-// }
-
-// // ─────────────────────────────────────────────
-// // Interfaces — Points & Wallet
-// // ─────────────────────────────────────────────
-// export interface PointHistoryItem {
-//   id: string;
-//   description: string;
-//   date: string;
-//   amount: number;
-//   points: number;
-//   type: "earn" | "redeem";
-// }
-
-// export interface PointsSummary {
-//   totalPoints: number;
-//   nextRewardAt: number;
-//   rewardValue: number; // baht per 10 points
-// }
-
-// export interface RedeemPointsPayload {
-//   points: number;
-// }
-
-// export interface RedeemPointsResponse {
-//   redeemedPoints: number;
-//   bahtAdded: number;
-//   newWalletBalance: number;
-//   remainingPoints: number;
-// }
-
-// export type TransactionType = "topup" | "payment" | "redeem";
-
-// export interface WalletTransaction {
-//   id: string;
-//   description: string;
-//   date: string;
-//   amount: number;
-//   type: TransactionType;
-// }
-
-// export interface WalletSummary {
-//   balance: number;
-//   availablePoints: number;
-//   transactions: WalletTransaction[];
-// }
-
-// // ─────────────────────────────────────────────
-// // API — Route & Geography
-// // ─────────────────────────────────────────────
-
-// /** GET /routes — ดึงรายการเส้นทางทั้งหมด */
-// export const getRoutes = () =>
-//   http.get<Route[]>("/routes");
-
-// /** GET /provinces?routeId=xxx — ดึงจังหวัดตามเส้นทาง */
-// // export const getProvinces = (routeId?: string) =>
-// //   http.get<Province[]>("/provinces", { params: { routeId } });
-
-// export const getProvinces = async (routeId?: string) => {
-//   // return await http.get<Province[]>("/provinces", { params: { routeId } });
-//   const response = await http.get("/provinces", {
-//     params: routeId && {
-//       routeId: routeId
-//     }
-//   })
-//   console.log("getProvinces response ", response.data)
-//   return response.data
-// }
-
-// /** GET /boarding-points?provinceId=xxx — ดึงจุดขึ้น/ลงรถตามจังหวัด */
-// // export const getBoardingPoints = (provinceId?: string) =>
-// //   http.get<BoardingPoint[]>("/boarding-points", { params: { provinceId } });
-
-// export const getBoardingPoints = async (provinceId?: string) => {
-//   // return await http.get<Province[]>("/provinces", { params: { routeId } });
-//   const response = await http.get("/boarding-points", {
-//     params: provinceId && {
-//       provinceId: provinceId
-//     }
-//   })
-//   console.log("getBoardingPoints response ", response.data)
-//   return response.data
-// }
-
-// // ─────────────────────────────────────────────
-// // API — Trip (Search)
-// // ─────────────────────────────────────────────
-
-// /** GET /trips — ค้นหาเที่ยวรถ */
-// // export const searchTrips = (params: TripSearchParams) =>
-// //   http.get<Trip[]>("/trips", { params });
-// export const searchTrips = async (body) => {
-//   return await http.post<Trip[]>("/trips", body, {})
-// }
-// /** GET /trips/:id — ดึงข้อมูลเที่ยวรถเดียว */
-// export const getTripById = (tripId: string) =>
-//   http.get<Trip>(`/trips/${tripId}`);
-
-// /** GET /trips/:id/seats — ดึง layout + สถานะที่นั่งของเที่ยวรถ */
-// export const getTripSeats = (tripId: string) =>
-//   http.get<TripSeatsResponse>(`/trips/${tripId}/seats`);
-
-// // ─────────────────────────────────────────────
-// // API — Booking
-// // ─────────────────────────────────────────────
-
-// /** POST /bookings — สร้างการจอง */
-// export const createBooking = (payload: CreateBookingPayload) =>
-//   http.post<CreateBookingResponse>("/bookings", payload);
-
-// /** GET /bookings — ดึงรายการการจองของผู้ใช้ */
-// export const getMyBookings = (status?: "upcoming" | "completed" | "cancelled") =>
-//   http.get<BookingListItem[]>("/bookings", { params: { status } });
-
-// /** GET /bookings/:id — ดึงรายละเอียดการจอง */
-// export const getBookingById = (bookingId: string) =>
-//   http.get<BookingDetail>(`/bookings/${bookingId}`);
-
-// /** PATCH /bookings/:id/cancel — ยกเลิกการจอง */
-// export const cancelBooking = (bookingId: string) =>
-//   http.patch<{ success: boolean; message: string }>(`/bookings/${bookingId}/cancel`);
-
-// // ─────────────────────────────────────────────
-// // API — Promotion
-// // ─────────────────────────────────────────────
-
-// /** GET /promotions — ดึงรายการโปรโมชั่น */
-// export const getPromotions = (memberOnly?: boolean) =>
-//   http.get<Promotion[]>("/promotions", { params: { memberOnly } });
-
-// /** GET /promotions/:id — ดึงรายละเอียดโปรโมชั่น */
-// export const getPromotionById = (promoId: string) =>
-//   http.get<Promotion>(`/promotions/${promoId}`);
-
-// /** POST /promotions/validate — ตรวจสอบรหัสโปรโมชั่น */
-// export const validatePromoCode = (promoCode: string, tripId?: string) =>
-//   http.post<ValidatePromoResponse>("/promotions/validate", { promoCode, tripId });
-
-// // ─────────────────────────────────────────────
-// // API — Payment
-// // ─────────────────────────────────────────────
-
+ 
 const sourceTypeToPath = (sourceType: PaymentSourceType) => {
   if (sourceType === "alipay") return "alipay-qr";
   if (sourceType === "wechat_pay_mpm") return "wechat-pay";
@@ -1162,81 +1059,4 @@ export const createCharge = (total: number, sourceType: PaymentSourceType, booki
     bookingDetail,
     { params: { amount: total } }
   );
-
-// /** GET /payment/transaction/:id — ดึงรายละเอียด transaction */
-// export const getTransactionById = (id: string) =>
-//   http.get<{ charge: TransactionDetail }>(`/payment/transaction/${id}`);
-
-// /** GET /payment/transaction/:chargeId — ดึงสถานะการชำระเงิน (polling) */
-// export const getCharge = (chargeId: string) =>
-//   http.get<ChargeStatusResponse>(`/payment/transaction/${chargeId}`);
-
-// /** POST /payment/cancel/:chargeId — ยกเลิกรายการชำระเงิน */
-// export const cancelCharge = (chargeId: string) =>
-//   http.post(`/api/payment/cancel/${chargeId}`);
-
-// // ─────────────────────────────────────────────
-// // API — Auth
-// // ─────────────────────────────────────────────
-
-// /** POST /auth/login — เข้าสู่ระบบ */
-// export const login = (payload: LoginPayload) =>
-//   http.post<AuthResponse>("/auth/login", payload);
-
-// /** POST /auth/register — ลงทะเบียน */
-// export const register = (payload: RegisterPayload) =>
-//   http.post<AuthResponse>("/auth/register", payload);
-
-// /** POST /auth/line — เข้าสู่ระบบด้วย LINE LIFF token */
-// export const loginWithLine = (lineAccessToken: string) =>
-//   http.post<AuthResponse>("/auth/line", { lineAccessToken });
-
-// /** POST /auth/logout — ออกจากระบบ */
-// export const logout = () =>
-//   http.post<{ success: boolean }>("/auth/logout");
-
-// // ─────────────────────────────────────────────
-// // API — User Profile
-// // ─────────────────────────────────────────────
-
-// /** GET /users/me — ดึงข้อมูลผู้ใช้ที่เข้าสู่ระบบ */
-// export const getMyProfile = () =>
-//   http.get<UserProfile>("/users/me");
-
-// /** PATCH /users/me — อัปเดตข้อมูลผู้ใช้ */
-// export const updateMyProfile = (payload: Partial<Pick<UserProfile, "fullName" | "phone" | "email" | "avatarUrl">>) =>
-//   http.patch<UserProfile>("/users/me", payload);
-
-// // ─────────────────────────────────────────────
-// // API — Points
-// // ─────────────────────────────────────────────
-
-// /** GET /points — ดึงยอดแต้มสะสม */
-// export const getPointsSummary = () =>
-//   http.get<PointsSummary>("/points");
-
-// /** GET /points/history — ดึงประวัติแต้มสะสม */
-// export const getPointsHistory = () =>
-//   http.get<PointHistoryItem[]>("/points/history");
-
-// /** POST /points/redeem — แลกแต้มเป็นเงิน Wallet */
-// export const redeemPoints = (payload: RedeemPointsPayload) =>
-//   http.post<RedeemPointsResponse>("/points/redeem", payload);
-
-// // ─────────────────────────────────────────────
-// // API — Wallet
-// // ─────────────────────────────────────────────
-
-// /** GET /wallet — ดึงยอดเงิน + ประวัติธุรกรรม */
-// export const getWallet = () =>
-//   http.get<WalletSummary>("/wallet");
-
-// /** GET /wallet/transactions — ดึงประวัติธุรกรรมกระเป๋าเงิน */
-// export const getWalletTransactions = () =>
-//   http.get<WalletTransaction[]>("/wallet/transactions");
-
-// /** POST /wallet/topup — เติมเงินเข้ากระเป๋า */
-// export const topupWallet = (amount: number, sourceType: PaymentSourceType) =>
-//   http.post<{ chargeId: string; qrCodeUrl: string }>("/wallet/topup", { amount, sourceType });
-
-// export default http;
+ 

@@ -63,6 +63,7 @@ const BookingFlow = () => {
     try {
       const detail = await getTripDetail(trip.id);
       setTripDetail(detail);
+      store?.setSelectedTrip(detail)
     } catch (error) {
       console.error("get trip detail error", error);
     } finally {

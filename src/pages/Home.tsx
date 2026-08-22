@@ -14,10 +14,9 @@ import { cn } from "@/lib/utils";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from "@/components/ui/accordion";
 import "../css/Home.css";
-import { mockPromotions } from "@/data/mockData";
 // import { getRoutes, getPromotions, Province } from "@/services/api";
 import { useQuery } from "@tanstack/react-query";
-import { loginWithLine, getUserMe, getPromotions, getProvinces, getRoutes, getBusStops, getFaqs, bookingList, updatePassengerLocation, bookingDetail, getBoardingPoints } from "@/services/api";
+import { loginWithLine, getUserMe, getPromotions, getProvinces, getRoutes as getApiRoutes, getBusStops, getFaqs, bookingList, updatePassengerLocation, bookingDetail, getBoardingPoints } from "@/services/api";
 import liff from "@line/liff";
 import moment from "moment";
 import { statusConfig } from "./MyTickets";
@@ -43,6 +42,8 @@ const Home = () => {
   const [busStops, setBusStops] = useState<any[]>([]);
   const [maxPassenger, setMaxPassenger] = useState(3);
   const [introducRoute, setIntroduceRoute] = useState<any[]>([]);
+  const [isApiReady, setIsApiReady] = useState(false);
+  const [isApiUnavailable, setIsApiUnavailable] = useState(false);
   // API Queries
 
   // const { data: promotions = [], isLoading: isLoadingPromotions } = useQuery({
@@ -135,7 +136,32 @@ const Home = () => {
     };
 
     const conf = async () => {
-      try{
+      try {
+        // These datasets are required for the booking UI. Do not render the
+        // page when the API returns an error or an unexpected payload.
+        const [routeData, provinceResponse] = await Promise.all([
+          getApiRoutes(),
+          getProvinces(),
+        ]);
+        const provinceData = Array.isArray(provinceResponse)
+          ? provinceResponse
+          : provinceResponse?.data;
+
+        // if (!Array.isArray(routeData) || !Array.isArray(provinceData)) {
+        //   throw new Error("Required home API data is unavailable");
+        // }
+
+        setRoutesGroup(routeData);
+        setProvinces(provinceData);
+        setIsApiReady(true);
+        setIsApiUnavailable(false);
+      } catch (error) {
+        console.error("Home API check failed", error);
+        setIsApiUnavailable(true);
+        return;
+      }
+
+      try {
         const { data: company, error } = await supabase
           .from('companies')
           .select(`
@@ -157,22 +183,6 @@ const Home = () => {
         console.error("Home company check failed", e)
       }
       try {
-        const data: any = await getRoutes()
-        console.log("routes_group ", data)
-        setRoutesGroup(data)
-      } catch (error) {
-        throw error
-      }
-
-      try {
-        const data = await getProvinces()
-        console.log("provinces ", data)
-        setProvinces(data?.data)
-      } catch (error) {
-        throw error
-      }
-
-      try {
         const data = await getPromotions({ memberOnly: "", visibility: "", routeId: "", dayOfWeek: "" });
         if (data) {
           console.log("promotions ", data);
@@ -193,7 +203,7 @@ const Home = () => {
     fetchUser();
     conf();
     checkTicketStatus();
-    getRoutes();
+    getIntroRoutes();
 
     // Cleanup function
     return () => {
@@ -255,7 +265,7 @@ const Home = () => {
     fetchBusStopsForRoute();
   }, [store.originProvinceId, store.destinationProvinceId]);
 
-  const getRoutes = async () => {
+  const getIntroRoutes = async () => {
     const { data: routes, error } = await supabase.from('routes').select('*')
     if (error) {
       console.error("Error fetching routes:", error);
@@ -472,27 +482,27 @@ const Home = () => {
           }
           lastUpdateRef.current = now;
 
-          try {
-            const bookings = await supabase.from('bookings').select('*')
-            .eq('user_id', userMe?.id).in('status', ['confirmed', 'upcoming']).in('paymentStatus', ['paid']);
-            // await bookingList(1, 100)
-            const currentTicket = bookings?.data?.filter((ticket) => (getTicketStatus(ticket).key === "upcoming" || getTicketStatus(ticket).key === "confirmed") && (moment().isBefore(moment(`${ticket.date} ${ticket.arrivalTime}`, "YYYY-MM-DD HH:mm"))) && (ticket.paymentStatus === "paid"))
+          // try {
+          //   const bookings = await supabase.from('bookings').select('*')
+          //   .eq('user_id', userMe?.id).in('status', ['confirmed', 'upcoming']).in('paymentStatus', ['paid']);
+          //   // await bookingList(1, 100)
+          //   const currentTicket = bookings?.data?.filter((ticket) => (getTicketStatus(ticket).key === "upcoming" || getTicketStatus(ticket).key === "confirmed") && (moment().isBefore(moment(`${ticket.date} ${ticket.arrivalTime}`, "YYYY-MM-DD HH:mm"))) && (ticket.paymentStatus === "paid"))
 
-            console.log("Founded current tickets: ", currentTicket)
-            if (currentTicket.length > 0) {
-              // ใช้ Promise.all แทน forEach เพื่อรอให้ async operations เสร็จ
-              await Promise.all(currentTicket.map(async (ticket) => {
-                console.log("upcoming ticket: ", ticket?.id);
-                const bookDe: any = await bookingDetail({ id: ticket?.id })
-                console.log("Updating location for booking: ", bookDe);
-                await updatePassengerLocation(bookDe?.tripId, userLocation);
-              }));
-            } else {
-              console.log("No upcoming tickets found, skipping location update");
-            }
-          } catch (error) {
-            console.error("Error checking ticket status: ", error);
-          }
+          //   console.log("Founded current tickets: ", currentTicket)
+          //   if (currentTicket.length > 0) {
+          //     // ใช้ Promise.all แทน forEach เพื่อรอให้ async operations เสร็จ
+          //     await Promise.all(currentTicket.map(async (ticket) => {
+          //       console.log("upcoming ticket: ", ticket?.id);
+          //       const bookDe: any = await bookingDetail({ id: ticket?.id })
+          //       console.log("Updating location for booking: ", bookDe);
+          //       await updatePassengerLocation(bookDe?.tripId, userLocation);
+          //     }));
+          //   } else {
+          //     console.log("No upcoming tickets found, skipping location update");
+          //   }
+          // } catch (error) {
+          //   console.error("Error checking ticket status: ", error);
+          // }
 
         }
       },
@@ -506,6 +516,11 @@ const Home = () => {
       }
     )
   }
+
+  if (!isApiReady || isApiUnavailable) {
+    return <div className="min-h-screen bg-white" aria-hidden="true" />;
+  }
+
   return (
     <div className="min-h-screen bg-background flex flex-col pb-20">
       <header className="bg-primary text-primary-foreground px-4 py-3 flex items-start justify-between gap-3 shadow-md sticky top-0  z-50 pt-8 rounded-b-3xl " style={{ height: "10rem" }}>

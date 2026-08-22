@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useBookingStore, type PassengerInfo, type PassengerMeal } from "@/store/bookingStore";
-import { getAddons, getPromotions, getPromotionsTrip, getUserMe, userPoints, validatePromo } from "@/services/api";
+import { getAddons, getPassengerType, getPromotions, getPromotionsTrip, getUserMe, userPoints, validatePromo } from "@/services/api";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -32,11 +32,11 @@ interface PassengerInfoSectionProps {
 // ] as const;
 
 const PassengerInfoSection = ({ onContinue }: PassengerInfoSectionProps) => {
-  const store = useBookingStore();
-  const tripPrice = store.selectedTrip?.fare ?? 0;
-
+  const store = useBookingStore(); 
+  const tripPrice = store.selectedTrip?.fares  ;
+  const trip = store.selectedTrip
   const [passengerTypes , setPassengerType] = useState( [
-    {"idx":5,"id":"da0b8eea-","code":"general","name_th":"ทั่วไป","name_en":"General","requires_document":false},
+    {"idx":5,"id":"da0b8eea-","code":"adult","name":"ทั่วไป","name_en":"General","requires_document":false},
   // { value: "male", label: "ชาย" },
   // { value: "female", label: "หญิง" }
 ])
@@ -84,7 +84,11 @@ const PassengerInfoSection = ({ onContinue }: PassengerInfoSectionProps) => {
   "totalPoints": 1,
   "nextRewardAt": 1,
   "rewardValue": 1
-});
+  });
+
+  useEffect(() => {
+    setMealAddons(store.mealAddons ?? []);
+  }, [store.mealAddons]);
 
   const redeemableCoupons = [
     // { id: 'coupon-1', title: 'คูปองส่วนลด 50 บาท', pointsRequired: 200, promoCode: 'PT50', discountAmount: 50 },
@@ -92,6 +96,7 @@ const PassengerInfoSection = ({ onContinue }: PassengerInfoSectionProps) => {
   ];
 
   useEffect(() => {
+    console.log("trip detail: ",trip)
     setPromoInput(store.promoCode);
     setPromoApplied(store.discount > 0);
   }, [store.promoCode, store.discount]);
@@ -105,20 +110,16 @@ const PassengerInfoSection = ({ onContinue }: PassengerInfoSectionProps) => {
     }
     getpoints();
     const setuppasstype = async()=>{
-      const {data:types,error} = await supabase.from('passenger_tiers').select('*').eq('requires_document',false) ;
-      if (error) {
-        console.error("Error fetching passenger types:", error);
-      } else {
-        setPassengerType(types || [])
-      } 
+      const pstype = await  getPassengerType() 
+        setPassengerType(pstype || []) 
     }
     setuppasstype()
     if (user) { 
       const userData = JSON.parse(user);
       console.log("User data from localStorage:", userData);
-      const dayweek = new Date(store.selectedTrip?.date ?? "").toLocaleString("en-US", { weekday: "long" }); 
+      const dayweek = new Date(trip?.trip?.serviceDate ?? "").toLocaleString("en-US", { weekday: "long" }); 
       getPromotionsTrip({ 
-        routeId: store.selectedTrip?.id, 
+        routeId: store.selectedTrip?.trip?.routeId, 
         phone: userData?.user?.phone,
         dayOfWeek: dayweek
     } )
@@ -131,7 +132,7 @@ const PassengerInfoSection = ({ onContinue }: PassengerInfoSectionProps) => {
     }
    
 
-    getAddons(store.selectedTrip?.id , 1 ,10).then(data => {
+    getAddons(store.selectedTrip?.trip?.id , 1 ,10).then(data => {
       console.log("Fetched meal addons:", data);
       setMealsMenu(data || []);
     })
@@ -178,12 +179,25 @@ const PassengerInfoSection = ({ onContinue }: PassengerInfoSectionProps) => {
   const getMealTotal = (seatId: string) => {
     const m = getMeal(seatId);
     if (!m) return 0;
-    return m.items.reduce((s, it) => s + (Number(it.item.unitPrice)  * it.qty), 0);
+    return m.items.reduce((s, it) => s + Number(it.item.unitPrice) * it.qty, 0);
   };
 
-  const totalMealCost = mealAddons.reduce((sum, m) => sum + m.items.reduce((s, it) => s + (Number(it.item.unitPrice) * it.qty), 0), 0);
+  const totalMealCost = mealAddons.reduce(
+    (sum, meal) => sum + meal.items.reduce((mealSum, selection) => (
+      mealSum + Number(selection.item.unitPrice) * selection.qty
+    ), 0),
+    0,
+  );
 
-  const calculateSubtotal = () => passengers.length * tripPrice;
+  const calculateSubtotal = () => {
+    const fares = store.selectedTrip?.fares ?? [];
+
+    return passengers.reduce((subtotal, passenger) => {
+      const fare = fares.find(({ passenger_type }) => passenger_type === passenger.passengerType);
+
+      return subtotal + Number(fare?.amount ?? 0);
+    }, 0);
+  };
 
   const doApplyPromo = async (code: string) => {
     if (!code) return;
@@ -193,12 +207,12 @@ const PassengerInfoSection = ({ onContinue }: PassengerInfoSectionProps) => {
       store.setPromoCode(code); store.setDiscount(redeemed.discountAmount);
       toast.success("ใช้โค้ดลดจากคูปองพอยท์สำเร็จ!"); return;
     }
-    if (code.toUpperCase() === 'FREERIDE10') {
-      setPromoError(""); setPromoApplied(true);
-      store.setPromoCode(code); store.setDiscount(tripPrice);
-      toast.success("ใช้สิทธิ์นั่งฟรี 1 เที่ยวสำเร็จ!"); return;
-    }
-    const promo: any = await validatePromo(code.toUpperCase(), store.selectedTrip?.id ?? "");
+    // if (code.toUpperCase() === 'FREERIDE10') {
+    //   setPromoError(""); setPromoApplied(true);
+    //   store.setPromoCode(code); store.setDiscount(tripPrice);
+    //   toast.success("ใช้สิทธิ์นั่งฟรี 1 เที่ยวสำเร็จ!"); return;
+    // }
+    const promo: any = await validatePromo(code.toUpperCase(), store.selectedTrip?.trip?.id ?? "");
     if (!promo.valid) {
       setPromoError(promo.message); setPromoApplied(false);
       store.setDiscount(0); toast.error(promo.message);
@@ -302,17 +316,17 @@ const PassengerInfoSection = ({ onContinue }: PassengerInfoSectionProps) => {
                       <Select value={p.passengerType} onValueChange={(v) => updatePassenger(i, "passengerType", v)}>
                         <SelectTrigger className="h-11 shadow-sm"><SelectValue /></SelectTrigger>
                         <SelectContent>
-                          {passengerTypes.map((pt) => <SelectItem key={pt.idx} value={pt.code}>{t(pt.name_th)}</SelectItem>)}
+                          {trip && trip?.fares.length > 0 && trip?.fares.map((pt) => <SelectItem key={pt.passenger_type} value={pt.passenger_type}>{t(pt.name)}</SelectItem>)}
                         </SelectContent>
                       </Select>
                     </div>
                   </div>
 
                   {/* Seat price row */}
-                  <div className="bg-primary/5 rounded-lg p-2.5 flex justify-between items-center mt-2">
+                  {/* <div className="bg-primary/5 rounded-lg p-2.5 flex justify-between items-center mt-2">
                     <span className="text-[10px] font-bold text-primary uppercase">{t("ราคาที่นั่งนี้")}</span>
                     <span className="text-sm font-bold text-primary">฿{tripPrice.toLocaleString()}</span>
-                  </div>
+                  </div> */}
 
                   {/* Meal addon row */}
                   <div className="rounded-xl border-2 border-dashed border-primary/20 bg-primary/5 p-3">
@@ -334,7 +348,12 @@ const PassengerInfoSection = ({ onContinue }: PassengerInfoSectionProps) => {
                       {meal && (mealTotal > 0) ? (
                         <div className="mt-2 space-y-1">
                           {meal.items.map(it => (
-                            <div key={it.item.id} className="flex justify-between text-[11px]"><span className="text-muted-foreground">{it.item.title} x{it.qty}</span><span className="font-bold text-primary">฿{(Number(it.item.unitPrice)  * it.qty).toLocaleString()}</span></div>
+                            <div key={it.item.id} className="flex justify-between text-[11px]">
+                              <span className="text-muted-foreground">{t(it.item.title)} x{it.qty}</span>
+                              <span className="font-bold text-primary">
+                                ฿{(Number(it.item.unitPrice) * it.qty).toLocaleString()}
+                              </span>
+                            </div>
                           ))}
                           <div className="flex justify-between text-[11px] font-extrabold pt-1 border-t border-primary/20">
                             <span className="text-primary">{t("รวม")}</span>
