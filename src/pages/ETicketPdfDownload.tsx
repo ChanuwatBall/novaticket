@@ -1,7 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { bookingDetail, getAccessToken } from "@/services/api";
 import { getStoredCompany, loadCompany, storeCompany } from "@/lib/company";
-import { createTicketPdf, decodeTicketPayload } from "@/lib/ticketPdf";
+import { createTicketPdf, decodeTicketPayload, normalizeBooking } from "@/lib/ticketPdf";
 import { Loader2, Download, AlertCircle } from "lucide-react";
 import QRCode from "qrcode";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -15,7 +15,7 @@ const createBookingQr = async (booking: any) => {
     bookingReference: booking.bookingReference,
   });
 
-  return QRCode.toDataURL(btoa(qrBookingPayload));
+  return QRCode.toDataURL(booking.qrCode || btoa(qrBookingPayload));
 };
 
 const ETicketPdfDownload = () => {
@@ -56,10 +56,11 @@ const ETicketPdfDownload = () => {
       throw new Error(detail.message || detail.error);
     }
 
+    const normalizedBooking = normalizeBooking(detail);
     return {
-      booking: detail,
-      qrCode: await createBookingQr(detail),
-      company: await loadCompany(),
+      booking: normalizedBooking,
+      qrCode: await createBookingQr(normalizedBooking),
+      company: detail.company || await loadCompany(),
     };
   }, [bookingref, searchParams]);
 

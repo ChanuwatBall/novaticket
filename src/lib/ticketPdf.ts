@@ -37,6 +37,29 @@ const compactJoin = (items: unknown[], separator = " | ") =>
 const firstValue = (...values: unknown[]) =>
   values.find((value) => value !== undefined && value !== null && value !== "");
 
+const formatBookingTime = (value: string | undefined) => {
+  if (!value) return "";
+  return new Intl.DateTimeFormat("th-TH", {
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  }).format(new Date(value));
+};
+
+export const normalizeBooking = (response: any) => ({
+  ...response,
+  bookingReference: response?.bookingReference || response?.bookingNo,
+  date: response?.date || response?.serviceDate,
+  departureTime: response?.departureTime || formatBookingTime(response?.scheduledDeparture),
+  arrivalTime: response?.arrivalTime || formatBookingTime(response?.scheduledArrival),
+  passengers: (response?.passengers || response?.seats || []).map((passenger: any) => ({
+    ...passenger,
+    seatNumber: passenger?.seatNumber || passenger?.seat_no,
+    fullName: passenger?.fullName || passenger?.full_name,
+    passengerType: passenger?.passengerType || passenger?.passenger_type,
+  })),
+});
+
 const asRecord = (value: unknown) =>
   typeof value === "object" && value !== null ? value as Record<string, unknown> : null;
 

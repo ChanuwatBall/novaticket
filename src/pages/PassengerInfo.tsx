@@ -91,7 +91,7 @@ const PassengerInfoPage = () => {
       toast.success(promo.message, { position: "top-center" })
 
 
-      const tripPrice = store.selectedTrip?.price ?? 0;
+      const tripPrice = store.selectedTrip?.trip?.price ?? 0;
       const total = tripPrice * store.selectedSeats.length;
       const discount = promo.discountPercent > 0
         ? Math.round(total * promo.discountPercent / 100)

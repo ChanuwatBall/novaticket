@@ -24,6 +24,9 @@ const sumAddOns = (items: any[] = []) =>
     return sum + price * qty;
   }, 0);
 
+const sumPassengerFares = (passengers: any[] = []) =>
+  passengers.reduce((sum, passenger) => sum + firstNumber(passenger?.fare_amount, passenger?.fareAmount), 0);
+
 export const calculatePaymentSummary = (booking: any, company?: any) => {
   const passengers = booking?.passengers || [];
   const seatCount = firstNumber(
@@ -44,7 +47,7 @@ export const calculatePaymentSummary = (booking: any, company?: any) => {
     booking?.service_total,
     sumAddOns(booking?.addOns || booking?.addons || []),
   );
-  const total = firstNumber(booking?.total);
+  const total = firstNumber(booking?.total, booking?.totalAmount);
   const explicitFee = firstNumber(
     booking?.feeTotal,
     booking?.fee_total,
@@ -74,12 +77,16 @@ export const calculatePaymentSummary = (booking: any, company?: any) => {
   const fallbackSeatSubtotal = pricePerSeat * Math.max(seatCount, 0);
   const seatSubtotal = explicitSeatSubtotal !== undefined
     ? toNumber(explicitSeatSubtotal)
+    : sumPassengerFares(passengers) > 0
+      ? sumPassengerFares(passengers)
     : fallbackSeatSubtotal > 0
       ? fallbackSeatSubtotal
       : Math.max(total - serviceTotal - explicitFee - explicitOmiseQrFee + discount, 0);
   const baseTotal = Math.max(seatSubtotal + serviceTotal - discount, 0);
   const computedOmiseQrFee = Math.round(baseTotal * omiseQrFeePercent / 100);
-  const feeTotal = explicitFee + explicitOmiseQrFee || companyFee + computedOmiseQrFee;
+  const feeTotal = explicitFee + explicitOmiseQrFee || (
+    booking?.totalAmount === undefined ? companyFee + computedOmiseQrFee : 0
+  );
 
   return {
     seatCount,

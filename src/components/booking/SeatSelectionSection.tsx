@@ -30,6 +30,12 @@ const specialCellLabels: Record<string, string> = {
   STAIRS: "บันได",
 };
 
+const normalizeSeatStatus = (status: string): SeatStatus => {
+  if (status === "available" || status === "selected") return status;
+  if (status === "unavailable" || status === "blocked") return "unavailable";
+  return "booked";
+};
+
 const SeatSelectionSection = ({ onContinue ,tripDetail,setTripDetail}: SeatSelectionSectionProps) => {
   const store = useBookingStore();
   const trip = store.selectedTrip;
@@ -54,22 +60,21 @@ const SeatSelectionSection = ({ onContinue ,tripDetail,setTripDetail}: SeatSelec
 
   useEffect(() => {
     const fetchSeats = async () => {
-      if (!trip?.id) return;
+      if (!trip?.trip?.id) return;
       setLoading(true);
       try {
         const [tripData, tdetail] = await Promise.all([
-          tripSeatsLayout(trip.id),
-          getTripDetail(trip.id)
+          tripSeatsLayout(trip.trip?.id),
+          getTripDetail(trip.trip?.id)
         ]);
-        console.log("tdetail ",tdetail)
-
         if (tripData && tripData.layout) {
           setLayout(tripData.layout);
-          const updatedSeats = (tripData.seats || []).map((s: Seat) => {
-            const isBooked = s.status === "available" ? false : true;
-            return isBooked ? { ...s, status: "booked" as SeatStatus } : s;
-          });
-          setSeats(updatedSeats);
+          setSeats(
+            (tripData.seats || []).map((seat: Seat) => ({
+              ...seat,
+              status: normalizeSeatStatus(String(seat.status)),
+            }))
+          );
         }
         setTripDetail(tdetail);
       } catch (error) {
@@ -79,7 +84,7 @@ const SeatSelectionSection = ({ onContinue ,tripDetail,setTripDetail}: SeatSelec
       }
     };
     fetchSeats();
-  }, [trip?.id]);
+  }, [trip?.trip?.id]);
 
   const handleContinue = () => {
     store.setSelectedSeats(selectedSeats);

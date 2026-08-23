@@ -10,7 +10,7 @@ import QRCode from "qrcode";
 import { t } from "i18next";
 import liff from "@line/liff";
 import { useToast } from "@/hooks/use-toast";
-import { encodeTicketPayload } from "@/lib/ticketPdf";
+import { encodeTicketPayload, normalizeBooking } from "@/lib/ticketPdf";
 import { calculatePaymentSummary } from "@/lib/paymentSummary";
 import { getStoredCompany } from "@/lib/company";
 
@@ -46,11 +46,12 @@ const ETicketPage = () => {
       if (res?.error !== undefined) {
         console.log("error booking detail");
       }
-      setBooking(res);
-      if (res?.tripId && res?.bookingReference) {
+      const normalizedBooking = normalizeBooking(res);
+      setBooking(normalizedBooking);
+      if (normalizedBooking?.tripId && normalizedBooking?.bookingReference) {
         try {
-          const qrBookingPayload = JSON.stringify({ "trip": res.tripId, "bookingReference": res.bookingReference });
-          QRCode.toDataURL(btoa(qrBookingPayload))
+          const qrBookingPayload = JSON.stringify({ "trip": normalizedBooking.tripId, "bookingReference": normalizedBooking.bookingReference });
+          QRCode.toDataURL(normalizedBooking.qrCode || btoa(qrBookingPayload))
             .then((code) => setQrCode(code))
             .catch((err) => console.error("Error generating QR code:", err));
         } catch (err) {
@@ -78,7 +79,7 @@ const ETicketPage = () => {
 
     setIsPdfLoading(true);
     try {
-      const payload = encodeTicketPayload({ booking, qrCode, company: getStoredCompany() });
+      const payload = encodeTicketPayload({ booking, qrCode, company: booking.company || getStoredCompany() });
       const downloadUrl = new URL(`/e-ticket/${booking.bookingReference || bookingref}/pdf?openExternalBrowser=1`, window.location.origin);
       downloadUrl.searchParams.set("payload", payload);
 
@@ -155,10 +156,10 @@ const ETicketPage = () => {
             <div className="flex justify-between"><span className="text-muted-foreground">{t("เส้นทาง")}</span><span className="font-medium">{booking?.routeName}</span></div>
             <div className="flex justify-between"><span className="text-muted-foreground">{t("วันที่")}</span><span>{booking?.date}</span></div>
             <div className="flex justify-between"><span className="text-muted-foreground">{t("เวลา")}</span><span>{booking?.departureTime} - {booking?.arrivalTime}</span></div>
-            <div className="flex justify-between"><span className="text-muted-foreground">{t("จุดขึ้นรถ")}</span><span>{booking?.boardingPoint}</span></div>
-            <div className="flex justify-between"><span className="text-muted-foreground">{t("จุดลงรถ")}</span><span>{booking?.dropOffPoint}</span></div>
+            <div className="flex justify-between"><span className="text-muted-foreground">{t("จุดขึ้นรถ")}</span><span>{booking?.boardingPoint?.name}</span></div>
+            <div className="flex justify-between"><span className="text-muted-foreground">{t("จุดลงรถ")}</span><span>{booking?.dropOffPoint?.name}</span></div>
             <div className="flex justify-between"><span className="text-muted-foreground">{t("ที่นั่ง")}</span><span>{booking?.passengers?.map((s: any) => s.seatNumber).join(", ")}</span></div>
-            <div className="flex justify-between"><span className="text-muted-foreground">{t("ประเภทรถ")}</span><span>{booking?.busType}</span></div>
+            <div className="flex justify-between"><span className="text-muted-foreground">{t("ประเภทรถ")}</span><span>{booking?.vehicleType}</span></div>
             {(store?.paymentStatus === "success" || booking?.paymentStatus === "paid") && <div className="border-t border-border pt-2 mt-2 space-y-2">
               <div className="flex justify-between text-xs">
                 <span className="text-muted-foreground">{t("ยอดรวม")} {paymentSummary.seatCount} {t("ที่นั่ง")}</span>
@@ -172,7 +173,7 @@ const ETicketPage = () => {
               )}
               <div className="flex justify-between text-xs">
                 <span className="text-muted-foreground">{t("ค่าบริการ")} {t("และอื่นๆ")} {t("รวม")}</span>
-                <span className="font-bold">฿{booking?.addonTotal?.toLocaleString()}</span>
+                <span className="font-bold">฿{ booking?.addonTotal ? booking?.addonTotal?.toLocaleString() : "0"}</span>
               </div>
               <div className="flex justify-between text-xs">
                 <span className="text-muted-foreground">{t("ค่าธรรมเนียม")}</span>
@@ -180,7 +181,7 @@ const ETicketPage = () => {
               </div>
               <div className="flex justify-between font-bold text-lg pt-2 border-t border-border">
                 <span>{t("ยอดรวมสุทธิ")}</span>
-                <span className="text-primary">฿{(paymentSummary.total + paymentSummary.feeTotal ).toLocaleString()}</span>
+                <span className="text-primary">฿{(booking?.totalAmount ).toLocaleString()}</span>
               </div>
             </div>}
           </CardContent>

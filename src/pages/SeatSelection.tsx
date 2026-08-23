@@ -26,6 +26,12 @@ const specialCellLabels: Record<string, string> = {
   STAIRS: "บันได",
 };
 
+const normalizeSeatStatus = (status: string): SeatStatus => {
+  if (status === "available" || status === "selected") return status;
+  if (status === "unavailable" || status === "blocked") return "unavailable";
+  return "booked";
+};
+
 const SeatSelection = () => {
   const navigate = useNavigate();
   const store = useBookingStore();
@@ -61,16 +67,12 @@ const SeatSelection = () => {
       if (tripData && tripData.layout) {
         setLayout(tripData.layout);
 
-        // Map the seats and determine booked status based on the ID
-        const updatedSeats = (tripData.seats || []).map((s: Seat) => {
-          const isBooked = s.status === "available" ? false : true
-          if (isBooked) {
-            return { ...s, status: "booked" as SeatStatus };
-          }
-          return s;
-        });
-        console.log("updatedSeats ", updatedSeats)
-        setSeats(updatedSeats);
+        setSeats(
+          (tripData.seats || []).map((seat: Seat) => ({
+            ...seat,
+            status: normalizeSeatStatus(String(seat.status)),
+          }))
+        );
       }
 
       const tdetail = await getTripDetail(id)

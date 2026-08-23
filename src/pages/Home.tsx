@@ -643,6 +643,7 @@ const Home = () => {
                         value={store.boardingPointId?.id}
                         onValueChange={(val) => {
                           const pt = filteredOriginBusStops.find(p => p.id === val);
+                          console.log(" boardingPoint ", pt)
                           store.setBoardingPoint(pt);
                         }}
                       >

@@ -272,6 +272,7 @@ export type NewBooking = {
   "destinationProvinceId": string,
   "boardingPointId": string,
   "dropOffPointId": string,
+  "paymentMethod"?: "promptpay" | "alipay" | "wechat_pay_mpm",
   "useStamp": boolean,
   "passengers": {
     "seatId": string,
@@ -291,14 +292,29 @@ export const createBooking = async (body: NewBooking) => {
   })
     .then((res) => {
       console.log("bookings res ", res)
-      return res.data
+      return res.data?.data
     })
     .catch((err) => {
       console.log("bookings err ", err)
       return getErrorData(err)
     })
 }
-
+export type BookingPayment= {
+  bookingId: string
+  paymentMethod: "promptpay" | "alipay" | "wechat_pay_mpm" 
+}
+export const createBookingPayment=async(body:BookingPayment)=>{
+  return await api.post("/api/v1/customer/bookings/" + body.bookingId + "/payment", {paymentMethod: body.paymentMethod} ,{
+    headers: getAuthHeaders()
+  })
+  .then((res)=>{
+    console.log("booking res ",res)
+    return res.data.data
+  }).catch((err)=>{
+    console.log("err ",err)
+    return null
+  })
+}
 // curl '/api/trips/{id}/driver-location' \
 //   --header 'Authorization: Bearer YOUR_SECRET_TOKEN'
 
@@ -378,12 +394,12 @@ export const bookingList = (page = 1, limit = 10, token?: string) => {
 }
 
 export const bookingDetail = async ({ id, token }: any) => {
-  return await api.get(`/api/bookings/${id}`, { 
+  return await api.get(`/api/v1/customer/bookings/${id}`, { 
     headers: getAuthHeaders()
   })
     .then((res) => {
       console.log("bookingDetail res ", res)
-      return res.data
+      return res.data?.data
     })
     .catch((err) => {
       console.log("bookingDetail err ", err)
@@ -476,29 +492,29 @@ export const chargeAlipayPayment = async (amount: any) => {
     })
 }
 
-export const chargeQrPayment = async (amount: any) => {
-  return await api.post("/api/payment/qr", {
-    amount: amount
-  }, {
-    params: { amount }
-  })
-    .then((res) => {
-      console.log("chargeQrPayment res ", res)
-      return res.data
-    })
-    .catch((err) => {
-      console.log("chargeQrPayment err ", err)
-      return getErrorData(err)
-    })
-}
+// export const chargeQrPayment = async (amount: any) => {
+//   return await api.post("/api/payment/qr", {
+//     amount: amount
+//   }, {
+//     params: { amount }
+//   })
+//     .then((res) => {
+//       console.log("chargeQrPayment res ", res)
+//       return res.data
+//     })
+//     .catch((err) => {
+//       console.log("chargeQrPayment err ", err)
+//       return getErrorData(err)
+//     })
+// }
 
-export const paymentStatus = async (chargeId: string) => {
-  return await api.get(`/api/payment/transaction/${chargeId}`, {
+export const paymentStatus = async (bookingId: string) => { 
+  return await api.get(`/api/v1/customer/bookings/${bookingId}/payment`, {
     headers: getAuthHeaders()
   })
     .then((res) => {
       console.log("paymentStatus res ", res)
-      return res.data
+      return res.data?.data
     })
     .catch((err) => {
       console.log("paymentStatus err ", err)
@@ -912,6 +928,7 @@ export interface Trip {
         "blockSalesAfterDeparture":  boolean
         "allowSalesWithoutAssignment": boolean,
         "ticketTerms": string
+        fee: number
     }
 }
 

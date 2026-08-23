@@ -11,17 +11,6 @@ import { motion, AnimatePresence } from "framer-motion";
 import { t } from "i18next";
 import { paymentMethods } from "@/services/api";
 
-const getCompanySalesSettings = () => {
-  try {
-    const company = JSON.parse(localStorage.getItem("company") || "{}");
-    const settings = company?.company_sales_settings;
-    return Array.isArray(settings) ? settings[0] : settings;
-  } catch (error) {
-    console.error("Failed to parse company sales settings:", error);
-    return null;
-  }
-};
-
 const toNumber = (value: unknown) => {
   const amount = Number(value);
   return Number.isFinite(amount) ? amount : 0;
@@ -33,11 +22,12 @@ const PaymentSection = () => {
   const [eWalletExpanded, setEWalletExpanded] = useState(false);
   const [selectedEWallet, setSelectedEWallet] = useState("");
   const [paymentsMethods, setPaymentsMethods] = useState<any[]>([]);
+  const [methodGroup, setMethodGroup] = useState<string>("qr_payment");
 
   useEffect(() => {
     const loadPaymentMethods = async () => {
       const res = await paymentMethods();
-      setPaymentsMethods(Array.isArray(res) ? res : []);
+      setPaymentsMethods(  res );
     };
 
     loadPaymentMethods();
@@ -46,6 +36,7 @@ const PaymentSection = () => {
   const qrPaymentGroup = paymentsMethods.find(({ group }) => group === "qr_payment");
   const eWalletGroups = paymentsMethods.filter(({ group }) => group !== "qr_payment");
   const eWalletOptions = eWalletGroups.flatMap(({ methods = [] }) => methods);
+  const paymentOptions = paymentsMethods.flatMap(({ methods = [] }) => methods);
 
   const subtotal = store.passengers.reduce((sum, p) => {
     const fare = store.selectedTrip?.fares?.find(
@@ -62,22 +53,35 @@ const PaymentSection = () => {
     0,
   );
 
-  const companySalesSettings = useMemo(() => getCompanySalesSettings(), []);
   const baseTotal = Math.max(0, (subtotal + totalMealCost) - store.discount);
-  const fee = toNumber(companySalesSettings?.fee);
-  const omiseQrFeePercent = toNumber(companySalesSettings?.omise_qr_fee);
-  const omiseQrFee = Math.round(baseTotal * omiseQrFeePercent / 100);
+  const fee = toNumber(store.selectedTrip?.salesSettings?.fee);
+  const selectedPaymentSource = methodGroup === "qr_payment"
+    ? qrPaymentGroup?.methods?.[0]?.source
+    : selectedEWallet;
+  const selectedPaymentMethod = paymentOptions.find(
+    ({ source }) => source === selectedPaymentSource,
+  );
+  const omiseQrFeePercent = selectedPaymentMethod
+    ? toNumber(selectedPaymentMethod.fee)
+    : 0;
+  const omiseQrFee = (baseTotal * omiseQrFeePercent) / 100;
   const total = Math.max(0, baseTotal + fee + omiseQrFee);
 
   const handlePaymentMethodChange = (value: string) => {
+    setMethodGroup(value);
     store.setPaymentMethod(value);
-    setEWalletExpanded(value === "wallet");
-    if (value !== "wallet") setSelectedEWallet("");
+    setEWalletExpanded(value !== "qr_payment");
+
+    if (value === "qr_payment") setSelectedEWallet("");
+  };
+
+  const handlePaymentSourceChange = (source: string) => {
+    setSelectedEWallet(source);
   };
 
   const isPayable =
-    store.paymentMethod === "qr" ||
-    (store.paymentMethod === "wallet" && selectedEWallet !== "");
+    (methodGroup === "qr_payment" && Boolean(qrPaymentGroup?.methods?.length)) ||
+    (methodGroup !== "qr_payment" && selectedEWallet !== "");
 
   const setupmeal = async (meals) => {
     console.log(" meals  ", meals)
@@ -105,8 +109,8 @@ const PaymentSection = () => {
         time: store.selectedTrip?.trip?.departureTime,
         arrive: store.selectedTrip?.trip?.arrivalTime,
         busType: store.selectedTrip?.trip?.vehicleType,
-        boardingPoint: store.boardingPointId?.name,
-        dropOffPoint: store.dropOffPointId?.name,
+        boardingPoint: store.boardingPointId?.id,
+        dropOffPoint: store.dropOffPointId?.id,
       },
       seat: store.selectedSeats,
       subtotal,
@@ -122,20 +126,21 @@ const PaymentSection = () => {
     const addons = await setupmeal(store.mealAddons)
     const body = {
       tripId: store.selectedTrip?.trip?.id,
+      paymentMethod: selectedPaymentSource,
       travelDate: store.travelDate,
       originProvinceId: store.originProvinceId?.id,
       destinationProvinceId: store.destinationProvinceId?.id,
-      boardingPointId: store.boardingPointId?.name,
-      dropOffPointId: store.dropOffPointId?.name,
+      boardingPointId: store.boardingPointId?.id,
+      dropOffPointId: store.dropOffPointId?.id,
       passengers: store.passengers,
       promoCode: store.promoCode,
       addOns: addons
     };
     console.log("new booking body:" , body)
 
-    // const sourceType = store.paymentMethod === "qr" ? "promptpay" : selectedEWallet;
-    // navigate("/payment/qr", { state: { bookingBody: body, sourceType, total, bookingDetail } });
-  }, [navigate, store, total, subtotal, selectedEWallet]);
+    const sourceType = selectedPaymentSource;
+    navigate("/payment/qr", { state: { bookingBody: body, sourceType, total, bookingDetail } });
+  }, [navigate, store, total, subtotal, fee, omiseQrFee, omiseQrFeePercent, selectedPaymentSource]);
 
   return (
     <div className="px-4 space-y-4">
@@ -244,7 +249,46 @@ const PaymentSection = () => {
       <div className="space-y-3">
         <label className="text-sm font-bold">{t("เลือกวิธีชำระเงิน")}</label>
        
-        <RadioGroup
+       <RadioGroup
+          value={methodGroup}
+          onValueChange={handlePaymentMethodChange}
+          className="space-y-3"
+        >
+          {  paymentsMethods.map((group) =>  (
+            <div key={group.group} className="rounded-lg border border-border overflow-hidden">
+              <div className="flex items-center space-x-3 p-3 hover:bg-accent/50 transition-colors">
+                <RadioGroupItem value={group.group} id={group.group} />
+                <Label htmlFor={group.group} className="flex items-center gap-2 cursor-pointer flex-1">
+                  {group.group === "qr_payment" && <QrCode className="h-5 w-5 text-primary" />}
+                  {group.group !== "qr_payment" && <Wallet className="h-5 w-5 text-primary" />}
+                  <div className="flex-1">
+                    <div className="font-medium">{t(group.groupName || group.group)}</div>
+                    <div className="text-[10px] text-muted-foreground">{t(group.methods.map((method: any) => method.name).filter(Boolean).join(", "))}</div>
+                  </div>
+                </Label>
+                {methodGroup === group.group && group.group !== "qr_payment" && (
+                  <ChevronDown className={`h-4 w-4 transition-transform ${eWalletExpanded ? 'rotate-180' : ''}`} onClick={() => setEWalletExpanded(!eWalletExpanded)} />
+                )}
+              </div>
+              
+              <AnimatePresence>
+                {methodGroup === group.group && eWalletExpanded && group.group !== "qr_payment" && (
+                  <motion.div initial={{ height: 0 }} animate={{ height: "auto" }} exit={{ height: 0 }} className="overflow-hidden border-t px-3 pb-3 pt-2 bg-slate-50">
+                    {group.methods.map((opt: any) => (
+                      <button key={`${group.group}-${opt.source}`} onClick={() => handlePaymentSourceChange(opt.source)} className={`w-full flex items-center gap-3 p-2 rounded-lg border text-left ${selectedEWallet === opt.source ? 'border-primary bg-white ring-1 ring-primary' : 'bg-transparent border-transparent'}`}>
+                        {opt.icon && <img src={opt.icon} className="h-6 w-6" alt="" />}
+                        <span className="text-sm font-medium">{t(opt.name || opt.source)}</span>
+                      </button>
+                    ))}
+                  </motion.div>
+                )}
+              </AnimatePresence> 
+            </div>
+          ))}
+          </RadioGroup>
+               
+
+        {/* <RadioGroup
           value={store.paymentMethod}
           onValueChange={handlePaymentMethodChange}
           className="space-y-3"
@@ -292,7 +336,7 @@ const PaymentSection = () => {
               )}
             </AnimatePresence>
           </div>}
-        </RadioGroup>
+        </RadioGroup> */}
       </div>
 
       <Button onClick={handleConfirmPayment} disabled={!isPayable} className="w-full h-14 text-lg font-bold shadow-lg" size="lg">

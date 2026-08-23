@@ -8,7 +8,7 @@ import { useBookingStore } from "@/store/bookingStore";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Timer, AlertCircle, CheckCircle2, Store } from "lucide-react";
-import { createCharge, cancelCharge, createBooking, NewBooking, chargeQrPayment, paymentStatus, chargeWechatPayment, chargeAlipayPayment, updatePassengerLocation } from "@/services/api";
+import { createCharge, cancelCharge, createBooking, NewBooking,  paymentStatus, chargeWechatPayment, chargeAlipayPayment, updatePassengerLocation, createBookingPayment, BookingPayment } from "@/services/api";
 import QRCode from "qrcode";
 import liff from "@line/liff";
 
@@ -48,9 +48,11 @@ const PaymentQRPage = () => {
 
   // const [timeLeft, setTimeLeft] = useState(TIMER_SECONDS);
   const [qrUrl, setQrUrl] = useState<string | null>(null);
+  const [qrDowloadUrl, setQrDowloadUrl] = useState<string | null>(null);
   const [qrLoading, setQrLoading] = useState(true);
   const [qrError, setQrError] = useState<string | null>(null);
   const [chargeId, setChargeId] = useState<string | null>(null);
+  const [booking, setBooking] = useState<any>(null);
   const [chargeStatus, setChargeStatus] = useState<string>("pending");
   const [isCancelDialogOpen, setIsCancelDialogOpen] = useState(false);
   const [paymenttimeout, setPaymentTimeout] = useState(300000); // 5 minutes in milliseconds
@@ -89,11 +91,11 @@ const PaymentQRPage = () => {
 
     const pollInterval = setInterval(async () => {
       try {
-        const response = await paymentStatus(chargeId);
+        const response = await paymentStatus(booking?.bookingId);
         console.log("Polling Payment Status:", response);
         const status = response.status.toLowerCase();
 
-        if (status === "success" || status === "successful") {
+        if (status === "paid" ) {
           handlePaymentSuccess();
           window.navigator.geolocation.getCurrentPosition(
             (position) => {
@@ -139,22 +141,22 @@ const PaymentQRPage = () => {
       setQrLoading(true);
       setQrError(null);
       try {
-        var payqr: {
-          "chargeId": string
-          "qrCodeUrl": string
-          "status": string
-          "expiresAt": string
-        } = null
-        if (sourceType === "promptpay") {
-          payqr = await chargeQrPayment(total)
-        } else if (sourceType === "wechat_pay_mpm") {
-          payqr = await chargeWechatPayment(total)
-        } else if (sourceType === "alipay") {
-          payqr = await chargeAlipayPayment(total)
-        }
-        console.log("payqr ", payqr)
-        setQrUrl(payqr.qrCodeUrl);
-        setChargeId(payqr.chargeId);
+        // var payqr: {
+        //   "chargeId": string
+        //   "qrCodeUrl": string
+        //   "status": string
+        //   "expiresAt": string
+        // } = null
+        // if (sourceType === "promptpay") {
+        //   payqr = await chargeQrPayment(total)
+        // } else if (sourceType === "wechat_pay_mpm") {
+        //   payqr = await chargeWechatPayment(total)
+        // } else if (sourceType === "alipay") {
+        //   payqr = await chargeAlipayPayment(total)
+        // }
+        // console.log("payqr ", payqr)
+        // setQrUrl(payqr.qrCodeUrl);
+        // setChargeId(payqr.chargeId);
 
         const bookingPayload: NewBooking = {
           "tripId": bookingBody?.tripId,
@@ -163,21 +165,32 @@ const PaymentQRPage = () => {
           "destinationProvinceId": bookingBody?.destinationProvinceId,
           "boardingPointId": bookingBody?.boardingPointId,
           "dropOffPointId": bookingBody?.dropOffPointId,
+          "paymentMethod": sourceType,
           "passengers": store.passengers.map(e => {
             return {
               ...e,
-              price: store?.selectedTrip?.price,
-              trip_id: store?.selectedTrip?.id
+              // price: store?.selectedTrip?.price,
+              trip_id: store?.selectedTrip?.trip?.id
             }
           }),
           "addOns": bookingBody?.addOns ,
-          "promoCode": store.promoCode,
-          "omiseChargeId": payqr.chargeId,
+          "promoCode": store.promoCode, 
           "useStamp": false
         }
         console.log("bookingPayload ", bookingPayload)
         const bookingres = await createBooking(bookingPayload)
         console.log("bookingres ", bookingres)
+        if(bookingres){
+          const bkbody:BookingPayment ={bookingId: bookingres?.bookingId , paymentMethod: sourceType }
+          console.log("bkbody ", bkbody)
+          const bookingpay = await  createBookingPayment(bkbody)
+          console.log("bookingpay ", bookingpay)
+          setQrUrl(bookingpay?.qrCode?.image?.download_uri)
+          setQrDowloadUrl(bookingpay?.qrCode?.image?.download_uri)
+          setChargeId(bookingpay?.chargeId)
+          setBooking(bookingres)
+        }
+
         if (bookingres.error) {
           toast({
             title: "ไม่สามารถจองตั๋วได้",
@@ -190,7 +203,7 @@ const PaymentQRPage = () => {
               </ToastAction>
             ),
           });
-          await cancelCharge(payqr.chargeId)
+          // await cancelCharge(payqr.chargeId)
           setTimeout(() => {
             navigate(-1)
           }, 1000)
@@ -229,10 +242,10 @@ const PaymentQRPage = () => {
   const handleDownloadQR = useCallback(async () => {
     if (!qrUrl) return;
     if (liff.isInClient && liff.isInClient()) {
-      liff.openWindow({ url: qrUrl+'?openExternalBrowser=1', external: true });
+      liff.openWindow({ url: qrDowloadUrl+'?openExternalBrowser=1', external: true });
     } else {
       try {
-        const response = await fetch(qrUrl);
+        const response = await fetch(qrDowloadUrl);
         const blob = await response.blob();
         const url = window.URL.createObjectURL(blob);
         const link = document.createElement("a");
@@ -244,10 +257,10 @@ const PaymentQRPage = () => {
         window.URL.revokeObjectURL(url);
       } catch (error) {
         console.error("Download failed:", error);
-        window.open(qrUrl, "_blank");
+        window.open(qrDowloadUrl, "_blank");
       }
     }
-  }, [qrUrl, chargeId]);
+  }, [qrDowloadUrl, chargeId]);
 
   const handleCancelCharge = async () => {
     if (chargeId) await cancelCharge(chargeId).catch(console.error);
