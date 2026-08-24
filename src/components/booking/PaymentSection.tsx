@@ -16,6 +16,8 @@ const toNumber = (value: unknown) => {
   return Number.isFinite(amount) ? amount : 0;
 };
 
+const roundMoney = (value: number) => Math.round((value + Number.EPSILON) * 100) / 100;
+
 const PaymentSection = () => {
   const navigate = useNavigate();
   const store = useBookingStore();
@@ -64,8 +66,8 @@ const PaymentSection = () => {
   const omiseQrFeePercent = selectedPaymentMethod
     ? toNumber(selectedPaymentMethod.fee)
     : 0;
-  const omiseQrFee = (baseTotal * omiseQrFeePercent) / 100;
-  const total = Math.max(0, baseTotal + fee + omiseQrFee);
+  const omiseQrFee = Math.max(0, (baseTotal * omiseQrFeePercent) / 100);
+  const total = roundMoney(baseTotal + fee + omiseQrFee);
 
   const handlePaymentMethodChange = (value: string) => {
     setMethodGroup(value);
@@ -229,7 +231,7 @@ const PaymentSection = () => {
             </div>
               <div className="flex justify-between text-xs">
                 <span className="text-muted-foreground">{t("ค่าธรรมเนียม")}</span>
-                <span className="font-bold">฿{(fee+omiseQrFee).toLocaleString()}</span>
+                <span className="font-bold">฿{(fee+omiseQrFee).toFixed(2).toLocaleString()}</span>
               </div>
             
             {/* {omiseQrFee > 0 && (
@@ -240,7 +242,7 @@ const PaymentSection = () => {
             )} */}
             <div className="flex justify-between items-center pt-2 border-t border-primary/10">
               <span className="font-black text-sm uppercase">{t("รวมที่ต้องชำระ")}</span>
-              <span className="text-xl font-black text-primary">฿{total.toLocaleString()}</span>
+              <span className="text-xl font-black text-primary">฿{total.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
             </div>
           </div>
         </CardContent>
@@ -340,7 +342,7 @@ const PaymentSection = () => {
       </div>
 
       <Button onClick={handleConfirmPayment} disabled={!isPayable} className="w-full h-14 text-lg font-bold shadow-lg" size="lg">
-        {t("ชำระเงินรวม")} ฿{total.toLocaleString()}
+        {t("ชำระเงินรวม")} ฿{total.toFixed(2)}
       </Button>
     </div>
   );
