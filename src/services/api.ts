@@ -378,10 +378,9 @@ export const getAddons = async (id: string,page: number, limit: number) => {
     })
 }
 
-export const bookingList = (page = 1, limit = 10, token?: string) => {
-  return api.get(`/api/bookings`, {
-    params: { page, limit },
-    headers: token ? { Authorization: `Bearer ${token}` } : getAuthHeaders()
+export const bookingList = () => {
+  return api.get(`/api/v1/customer/bookings`, { 
+    headers:   getAuthHeaders()
   })
     .then((res) => {
       console.log("bookingList res ", res)

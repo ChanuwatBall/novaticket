@@ -57,7 +57,7 @@ const SearchBooking = () => {
     setSearched(true);
     try {
 
-      const bookings = await bookingList(1, 10, token);
+      const bookings = await bookingList();
       console.log("bookingList ", bookings)
     } catch (error: any) {
       console.error("Search booking error:", error);

@@ -52,19 +52,35 @@ const mockTickets = [
 ];
 
 type Ticket = {
-    "id":  string
-    "bookingReference":string
-    "origin":string
-    "destination": string
-    "date": string
-    "departureTime": string
-    "arrivalTime": string
-    "seats": string[] 
-    "status":string
+    // "id":  string
+    // "bookingReference":string
+    // "origin":string
+    // "destination": string
+    // "date": string
+    // "departureTime": string
+    // "arrivalTime": string
+    // "seats": string[] 
+    // "status":string
+    // "paymentStatus": string
+    // "expiresAt": string
+    // "total": number
+    // "tripId"?: string
+   
+    "id": "e4fe0fb7-2e9a-468e-beff-f0cdcef33de0",
+    "bookingNo": "CB-20260823-8229E95E",
+    "status": "held",
+    "tripId": "091c2446-ad37-429f-9f1f-428c6195038b",
+    "routeName": "กรุงเทพฯ → เชียงใหม่",
+    "serviceDate": "2026-08-23",
+    "scheduledDeparture": "2026-08-23T01:00:00.000Z",
+    "scheduledArrival": "2026-08-23T11:00:00.000Z",
+    "seatNumbers": [
+        "4B"
+    ],
+    "totalAmount": 890,
     "paymentStatus": string
-    "expiresAt": string
-    "total": number
-    "tripId"?: string
+    "createdAt": "2026-08-23T06:58:34.410Z"
+
 }
 
 export const statusConfig: Record<string, { label: string, variant: "default" | "success" | "destructive" | "outline" | "secondary" }> = {
@@ -136,7 +152,8 @@ const MyTicketsPage = () => {
     if (loading) return;
     setLoading(true)
     try {
-      const bookings = await bookingList(page)
+      const bookings = await bookingList()
+      console.log("booking ", bookings)
       if (bookings.error) {
         toast.error("ไม่สามารถดึงข้อมูลตั๋วได้ " + bookings.error)
         return
@@ -184,7 +201,7 @@ const MyTicketsPage = () => {
 
       const params = new URLSearchParams({
         tripId: detail.tripId,
-        bookingReference: detail.bookingReference || ticket.bookingReference,
+        bookingReference: detail.bookingReference || ticket.bookingNo,
       });
       navigate(`/track?${params.toString()}`);
     } catch (error) {
@@ -240,10 +257,10 @@ const MyTicketsPage = () => {
                             <CardContent className="p-4">
                               <div className="flex items-start justify-between mb-2">
                                 <div>
-                                  <p className="text-xs text-muted-foreground">#{ ticket.bookingReference  }</p>
+                                  <p className="text-xs text-muted-foreground">#{ ticket.bookingNo  }</p>
                                   <div className="flex items-center gap-1.5 mt-1">
                                     <MapPin className="h-3.5 w-3.5 text-primary" />
-                                    <span className="font-bold">{t(ticket.origin)} → {t(ticket.destination)}</span>
+                                    <span className="font-bold">{ ticket.routeName}</span>
                                   </div>
                                 </div>
                                 <Badge variant={ticketStatus.variant}>
@@ -251,16 +268,16 @@ const MyTicketsPage = () => {
                                 </Badge>
                               </div>
                               <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                                <span>{ticket.date}</span>
+                                <span>{ticket.serviceDate}</span>
                                 <span className="flex items-center gap-1">
                                   <Clock className="h-3 w-3" />
-                                  {ticket.departureTime}
+                                  {ticket.scheduledDeparture && moment().format("hh:mm:ss DD/MM/YYYY")}
                                 </span>
-                                <span>{t("ที่นั่ง")} {ticket.seats.map((seat) => seat).join(", ")}</span>
+                                <span>{t("ที่นั่ง")} {ticket.seatNumbers.map((seat) => seat).join(", ")}</span>
                               </div>
                               <div className="flex items-center justify-between mt-2 pt-2 border-t border-border gap-3">
                                 <span className="font-bold text-primary">฿{netTotal.toLocaleString()}</span>
-                                {ticketStatus.key === "upcoming" && ticket.paymentStatus === "paid" ? (
+                                {ticketStatus.key === "pending" && ticket.paymentStatus === "paid" ? (
                                   <button 
                                     className="h-9 rounded-full px-3 text-xs flex flex-row items-center gap-1 font-bold text-primary border border-primary/20 bg-primary/5 hover:bg-primary/10 transition-all"
                                     disabled={trackingTicketId === ticket.id}

@@ -73,6 +73,65 @@ type TicketAddOn = {
   lineTotal?: number;
 };
 
+type TicketDetail = {
+    "id": "5c2bdfc9-4002-4823-83ba-a0b890cca687",
+    "bookingId": "5c2bdfc9-4002-4823-83ba-a0b890cca687",
+    "bookingNo": "CB-20260824-B9B1D128",
+    "status": string,
+    "paymentStatus": string,
+    "boardingPoint": {
+        "id": "20000000-0000-0000-0000-000000000001",
+        "name": "สถานีขนส่งหมอชิต 2"
+    },
+    "dropOffPoint": {
+        "id": "20000000-0000-0000-0000-000000000002",
+        "name": "สถานีขนส่งเชียงใหม่ อาเขต"
+    },
+    "paymentMethod": "promptpay",
+    "promoCode": null,
+    "discount": 0,
+    "origin": "สถานีขนส่งหมอชิต 2",
+    "originProvinceId": "6cb9fa31-84d2-5aff-a29e-4558e580f993",
+    "destination": "สถานีขนส่งเชียงใหม่ อาเขต",
+    "destinationProvinceId": "31b9d10a-1280-5bc9-9c2f-76de4075bfb1",
+    "vehicleType": "VIP 24",
+    "vehiclePlate": "2ขข-5567",
+    "omiseChargeId": "chrg_test_68sdxmq4qyupb33kz4l",
+    "fee": 8.08508116084604,
+    "tripId": "db17d02a-8f0a-479e-8eed-5d27b93cd65b",
+    "routeName": "กรุงเทพฯ → เชียงใหม่",
+    "serviceDate": "2026-08-25",
+    "scheduledDeparture": "2026-08-25T01:00:00.000Z",
+    "scheduledArrival": "2026-08-25T11:00:00.000Z",
+    "totalAmount": 498.09,
+    "seats": [
+        {
+            "seat_no": "5C",
+            "fare_amount": "490.00",
+            "full_name": "CH.Thongbut",
+            "passenger_type": "child",
+            "phone": "0903326911"
+        }
+    ],
+    "passengers": [
+        {
+            "seat_no": "5C",
+            "fare_amount": "490.00",
+            "full_name": "CH.Thongbut",
+            "passenger_type": "child",
+            "phone": "0903326911"
+        }
+    ],
+    "addOns": [],
+    "company": {
+        "name": "NOVA Transport Co., Ltd.",
+        "address": "99/9 Mockup Road,Bangkok 10110",
+        "phone": "02-000-0000"
+    },
+    "ticketTerms": "บริษัทไม่รับผิดชอบสิ่งของผิดกฎหมาย/ต้องห้าม/ตกค้าง\r\nกรณีเสียหายหรือสูญหายต้องแจ้งภายใน 8 วัน บริษัทฯ ขอสงวนสิทธิ์ชดใช้ตามส่วน",
+    "qrCode": "CB-20260824-B9B1D128"
+}
+
 const formatCurrency = (amount: unknown) =>
   Number(amount || 0).toLocaleString(undefined, {
     minimumFractionDigits: 2,
@@ -85,7 +144,7 @@ const TicketDetail = () => {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate()
   const store = useBookingStore();
-  const [ticket, setTicket] = useState(null)
+  const [ticket, setTicket] = useState<TicketDetail|null>(null)
   const [qr, setQr] = useState("")
   const [isCheckinLoading, setIsCheckinLoading] = useState(false)
   const [isPdfLoading, setIsPdfLoading] = useState(false)
@@ -151,7 +210,7 @@ const TicketDetail = () => {
   useEffect(() => {
     if (!ticket) return;
 
-    const isPending = ticket.paymentStatus === "pending" && moment().isBefore(moment(ticket.expiresAt));
+    const isPending = ticket.paymentStatus === "pending" && moment().isBefore(moment(ticket.scheduledArrival));
 
     if (isPending) {
       const interval = setInterval(() => {
@@ -160,7 +219,7 @@ const TicketDetail = () => {
       }, 15000);
       return () => clearInterval(interval);
     }
-  }, [ticket?.paymentStatus, ticket?.expiresAt, ticketId]);
+  }, [ticket?.paymentStatus, ticket?.scheduledArrival, ticketId]);
 
   const returnTab = searchParams.get("tab");
   const myTicketsPath = returnTab ? `/my-tickets?tab=${encodeURIComponent(returnTab)}` : "/my-tickets";
@@ -189,15 +248,15 @@ const TicketDetail = () => {
     store.setSelectedTrip(trip)
     // Map existing data to store
     store.setPaymentMethod(ticket.paymentMethod || "promptpay");
-    store.setTravelDate(ticket.date);
+    store.setTravelDate(ticket.serviceDate);
     store.setPromoCode(ticket.promoCode || "");
     store.setDiscount(ticket.discount || 0);
     store.setBookingId(ticket.id);
-    store.setNewBookingId(ticket.bookingReference);
-    store.setRoute(`${ticket.origin} - ${ticket.destination}`);
+    store.setNewBookingId(ticket.bookingNo);
+    store.setRoute(`${ticket.routeName}`);
     //
     store.setSelectedTrip(trip)
-    store.setBookingReference(ticket.bookingReference)
+    store.setBookingReference(ticket.bookingNo)
 
     // Construct province objects for the store
     if (ticket.originProvinceId) {
@@ -207,8 +266,8 @@ const TicketDetail = () => {
       store.setDestinationProvince({ id: ticket.destinationProvinceId, name: ticket.destination, name_en: ticket.routeName?.split(" - ")[1] || "" });
     }
 
-    store.setBoardingPoint({ name: ticket.boardingPoint, id: ticket.boardingPointId });
-    store.setDropOffPoint({ name: ticket.dropOffPoint, id: ticket.dropOffPointId });
+    store.setBoardingPoint({ name: ticket.boardingPoint?.name, id: ticket.boardingPoint?.id });
+    store.setDropOffPoint({ name: ticket.dropOffPoint?.name, id: ticket.dropOffPoint?.id});
     store.setPassengerCount(ticket.passengers.length);
 
     // Map passengers with all required fields
@@ -222,9 +281,9 @@ const TicketDetail = () => {
     })));
 
     // Map seats (mocking Seat objects for the store)
-    store.setSelectedSeats(ticket.seats.map((s: string) => ({
-      id: s,
-      number: s,
+    store.setSelectedSeats(ticket.seats.map((s) => ({
+      id: s.seat_no,
+      number: s.seat_no,
       status: 'booked',
     } as any)));
 
@@ -245,15 +304,15 @@ const TicketDetail = () => {
     // Navigate to Payment page with full context
     navigate("/payment", {
       state: {
-        total: ticket.total,
+        total: ticket.totalAmount,
         sourceType: ticket.paymentMethod || "promptpay",
         bookingBody: {
           tripId: trip.id,
-          travelDate: ticket.date,
+          travelDate: ticket.serviceDate,
           originProvinceId: ticket.originProvinceId,
           destinationProvinceId: ticket.destinationProvinceId,
-          boardingPointId: ticket.boardingPointId,
-          dropOffPointId: ticket.dropOffPointId,
+          boardingPointId: ticket.boardingPoint?.id,
+          dropOffPointId: ticket.dropOffPoint?.id ,
         }
       }
     });
@@ -264,11 +323,11 @@ const TicketDetail = () => {
 
     if (hasTripEnded(ticket)) return;
 
-    const departureTime = moment(`${ticket.date} ${ticket.departureTime}`, "YYYY-MM-DD HH:mm");
+    const departureTime = moment(`${ticket.scheduledDeparture}`, "YYYY-MM-DD HH:mm");
     if (moment().isBefore(departureTime)) {
       toast({
         title: t("ยังไม่ถึงเวลาเดินทาง"),
-        description: `${t("คุณสามารถเช็คอินได้ใน")} ${t("วันที่")} ${ticket.date} ${t("เวลา")} ${ticket.departureTime} ${t("น.")}  `,
+        description: `${t("คุณสามารถเช็คอินได้ใน")} ${t("วันที่")} ${ticket.serviceDate} ${t("เวลา")} ${ticket.scheduledDeparture} ${t("น.")}  `,
         variant: "destructive",
       });
       return;
@@ -277,7 +336,7 @@ const TicketDetail = () => {
     setIsCheckinLoading(true);
     try {
       const res = await checkinSelf({
-        ticketNumber: ticket.bookingReference,
+        ticketNumber: ticket.bookingNo,
         qrCode: qr
       });
       console.log("Check-in result:", res);
@@ -310,18 +369,18 @@ const TicketDetail = () => {
     if (!ticket?.tripId || hasTripEnded(ticket)) return;
     const params = new URLSearchParams({
       tripId: ticket.tripId,
-      bookingReference: ticket.bookingReference || "",
+      bookingReference: ticket.bookingNo || "",
     });
     navigate(`/track?${params.toString()}`);
   };
 
   const handleDownloadTicket = () => {
-    if (!ticket?.bookingReference) return;
+    if (!ticket?.bookingNo) return;
 
     setIsPdfLoading(true);
     try {
       const payload = encodeTicketPayload({ booking: ticket, qrCode: qr || null, company: getStoredCompany() });
-      const downloadUrl = new URL(`/e-ticket/${ticket.bookingReference}/pdf?openExternalBrowser=1`, window.location.origin);
+      const downloadUrl = new URL(`/e-ticket/${ticket.bookingNo}/pdf?openExternalBrowser=1`, window.location.origin);
       downloadUrl.searchParams.set("payload", payload);
 
       if (liff.isInClient?.()) {
@@ -353,7 +412,7 @@ const TicketDetail = () => {
     <BookingLayout showSteps={false} title={t("รายละเอียดตั๋ว")} navto={() => navigate(-1)} >
       <div className="px-4 space-y-4 pb-6">
         {/* Continue Payment Action */}
-        {ticket.paymentStatus === "pending" && ticket.status === "pending" && moment().isBefore(moment(ticket.expiresAt)) && (
+        {ticket.paymentStatus === "pending" && ticket.status === "pending" && moment().isBefore(moment(ticket.scheduledDeparture)) && (
           <Card className="bg-amber-50 border-amber-200 overflow-hidden">
             <CardContent className="p-4 flex flex-col gap-4">
               <div className="flex items-center gap-3">
@@ -376,14 +435,14 @@ const TicketDetail = () => {
         <Card className={`overflow-hidden ${ticket.status}`}>
           <div className={`${ticket.status === "pending" || ticket.status === "confirmed" ? "bg-primary" : "bg-gray-400"} text-primary-foreground px-4 py-4`}>
             <div className="flex items-center justify-between mb-2">
-              <span className="text-xs opacity-80">#{ticket.bookingReference}</span>
+              <span className="text-xs opacity-80">#{ticket.bookingNo}</span>
               <Badge variant={statusInfo.variant} className="text-xs">{t(statusInfo.label)}</Badge>
             </div>
             <div className="flex items-center gap-2 text-lg font-bold">
               <MapPin className="h-5 w-5 shrink-0" />
               {t(ticket.origin)} → {t(ticket.destination)}
             </div>
-            <p className="text-sm opacity-80 mt-1">{ticket.routeName} · {ticket.tripType}</p>
+            <p className="text-sm opacity-80 mt-1">{ticket.routeName} · {ticket.vehicleType}</p>
           </div>
 
           {/* QR for upcoming */}
@@ -411,15 +470,15 @@ const TicketDetail = () => {
             </h3>
             <div className="grid grid-cols-2 gap-y-2 text-sm">
               <span className="text-muted-foreground">{t("วันที่เดินทาง")}</span>
-              <span className="text-right font-medium">{ticket.date}</span>
+              <span className="text-right font-medium">{ticket.serviceDate}</span>
               <span className="text-muted-foreground">{t("เวลาออก")}</span>
-              <span className="text-right font-medium">{ticket.departureTime} น.</span>
+              <span className="text-right font-medium">{ticket.scheduledDeparture} น.</span>
               <span className="text-muted-foreground">{t("เวลาถึง (โดยประมาณ)")}</span>
-              <span className="text-right font-medium">{ticket.arrivalTime} น.</span>
+              <span className="text-right font-medium">{ticket.scheduledArrival} น.</span>
               <span className="text-muted-foreground">{t("จุดขึ้นรถ")}</span>
-              <span className="text-right font-medium">{ticket.boardingPoint}</span>
+              <span className="text-right font-medium">{ticket.boardingPoint?.name}</span>
               <span className="text-muted-foreground">{t("จุดลงรถ")}</span>
-              <span className="text-right font-medium">{ticket.dropOffPoint}</span>
+              <span className="text-right font-medium">{ticket.dropOffPoint?.name}</span>
             </div>
           </CardContent>
         </Card>
@@ -433,10 +492,10 @@ const TicketDetail = () => {
             </h3>
             <div className="grid grid-cols-2 gap-y-2 text-sm">
               <span className="text-muted-foreground">{t("ประเภทรถ")}</span>
-              <span className="text-right font-medium">{ticket.busType}</span>
+              <span className="text-right font-medium">{ticket.vehicleType}</span>
               <span className="text-muted-foreground">{t("ทะเบียนรถ")}</span>
-              <span className="text-right font-medium">{ticket.busPlate}</span>
-              <span className="text-muted-foreground">{t("ที่นั่ง")}</span>
+              <span className="text-right font-medium">{ticket.vehiclePlate}</span>
+              <span className="text-muted-foreground">{t("ที่นั่ง")}</span>x
               <span className="text-right font-medium">
                 {ticket.seats.join(", ")}
               </span>
@@ -455,9 +514,9 @@ const TicketDetail = () => {
               {ticket.passengers.map((p, i) => (
                 <div key={i} className="rounded-lg bg-muted/50 p-3 space-y-1.5">
                   <div className="flex items-center justify-between">
-                    <span className="font-semibold text-sm">{p.fullName}</span>
+                    <span className="font-semibold text-sm">{p.full_name}</span>
                     <Badge variant="outline" className="text-xs">
-                      {t("ที่นั่ง")} {p.seatNumber}
+                      {t("ที่นั่ง")} {p.seat_no}
                     </Badge>
                   </div>
                   <div className="grid grid-cols-1 gap-1 text-xs text-muted-foreground">
@@ -471,7 +530,7 @@ const TicketDetail = () => {
                     </span>
                     <span className="flex items-center gap-1.5">
                       <User className="h-3 w-3" />
-                      {passengerTypeLabels[p.passengerType] || p.passengerType}
+                      {passengerTypeLabels[p.passenger_type]  }
                     </span>
                   </div>
                 </div>
@@ -524,7 +583,7 @@ const TicketDetail = () => {
             </h3>
             <div className="grid grid-cols-2 gap-y-2 text-sm">
               <span className="text-muted-foreground">{t("วันที่จอง")}</span>
-              <span className="text-right font-medium">{ticket.bookingDate ? moment(ticket.bookingDate).local().format("DD MMM YYYY HH:mm") : "-"}</span>
+              <span className="text-right font-medium">{ticket.serviceDate ? moment(ticket.serviceDate).local().format("DD MMM YYYY HH:mm") : "-"}</span>
               <span className="text-muted-foreground">{t("ช่องทางชำระ")}</span>
               <span className="text-right font-medium">{ticket?.paymentMethod?.toUpperCase()}</span>
               {/* <span className="text-muted-foreground">{t("ราคา/ที่นั่ง")}</span>
