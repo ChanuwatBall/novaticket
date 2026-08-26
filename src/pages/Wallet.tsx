@@ -48,7 +48,7 @@ const Wallet = () => {
       setTransaction([])
     } else {
       setBalance(res.balance)
-      setAvailablePoints(res.point)
+      setAvailablePoints(res.availablePoints)
       setTransaction(res.transactions)
     }
   }

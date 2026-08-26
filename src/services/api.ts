@@ -346,14 +346,25 @@ export const updatePassengerLocation = async (tripId: string, body: { latitude: 
     })
 }
 
-export const getPromotionsTrip = async ( params?: any) => { 
+export type PromotionFilters = {
+  memberOnly?: boolean;
+  visibility?: string;
+  routeId?: string;
+  dayOfWeek?: string;
+  time?: string;
+  phone?: string;
+  limit?: number;
+  offset?: number;
+};
+
+export const getPromotionsTrip = async (params?: PromotionFilters) => {
   return await api.get(`/api/v1/customer/promotions`, {
     params: params || {} ,
     headers: getAuthHeaders()
   })
     .then((res) => {
       console.log("getPromotions res ", res)
-      return res.data
+      return unwrapData<any[]>(res)
     })
     .catch((err) => {
       console.log("getPromotions err ", err)
@@ -430,6 +441,18 @@ export const getTripDetail = async (tripid: string) => {
     })
 }
 
+export const getBusLicensePlate=async()=>{
+  return await api.get("/api/v1/customer/buses/registrations" ,{
+    headers:   getAuthHeaders()
+  })
+  .then(res =>{
+    return res.data
+  })
+  .catch(err=>{
+    console.log("err ",err)
+    return []
+  })
+}
 ///api/v1/passenger-types
 export const getPassengerType= async()=>{
   return await api.get("/api/v1/customer/passenger-types",{
@@ -522,12 +545,12 @@ export const paymentStatus = async (bookingId: string) => {
 }
 
 export const userPoints = async () => {
-  return await api.get(`/api/points/`, {
+  return await api.get(`/api/v1/customer/points`, {
     headers: getAuthHeaders()
   })
     .then((res) => {
       console.log("userPoints res ", res)
-      return res.data
+      return unwrapData(res)
     })
     .catch((err) => {
       console.log("userPoints err ", err)
@@ -535,13 +558,20 @@ export const userPoints = async () => {
     })
 }
 
-export const getpointHistory = async () => {
-  return await api.get(`/api/points/history`, {
-    headers: getAuthHeaders()
+export const getpointHistory = async (params?: {
+  from?: string;
+  to?: string;
+  type?: "earn" | "redeem";
+  limit?: number;
+  offset?: number;
+}) => {
+  return await api.get(`/api/v1/customer/points/history`, {
+    headers: getAuthHeaders(),
+    params: params || {},
   })
     .then((res) => {
       console.log("getpointHistory res ", res)
-      return res.data
+      return unwrapData<any[]>(res)
     })
     .catch((err) => {
       console.log("getpointHistory err ", err)
@@ -549,13 +579,14 @@ export const getpointHistory = async () => {
     })
 }
 
-export const getWalletPoint = async () => {
-  return await api.get(`/api/wallet/`, {
-    headers: getAuthHeaders()
+export const getWalletPoint = async (params?: { limit?: number; offset?: number }) => {
+  return await api.get(`/api/v1/customer/wallet`, {
+    headers: getAuthHeaders(),
+    params: params || {},
   })
     .then((res) => {
       console.log("getWalletPoint res ", res)
-      return res.data
+      return unwrapData(res)
     })
     .catch((err) => {
       console.log("getWalletPoint err ", err)
@@ -643,14 +674,12 @@ export const checkinSelf = async (body: { ticketNumber: string, qrCode: string }
     })
 }
 
-export const createComplaint = async (body: {
-  reporter_phone: string;
-  complaint_text: string;
-  vehicle_plate: string;
-  trip_id: string;
-  seat_code: string;
-}) => {
-  return await api.post("/api/complaints", body, {
+interface ComplaintPayload {
+  reporterPhone:string,
+  complaintText:string,
+  vehiclePlate?:string,tripId?:string,bookingId?:string,seatCode?:string,attachments?:string[]}
+export const createComplaint = async (body: ComplaintPayload) => {
+  return await api.post("/api/v1/customer/complaints", body, {
     headers: getAuthHeaders()
   })
     .then((res) => {
@@ -663,13 +692,13 @@ export const createComplaint = async (body: {
     });
 };
 
-export const getPromotions = async (params?: { memberOnly?: string; visibility?: string; routeId?: string; dayOfWeek?: string }) => {
+export const getPromotions = async (params?: PromotionFilters) => {
   return await api.get(`/api/v1/customer/promotions`, {
     params: params || {}
   })
     .then((res) => {
       console.log("getPromotions res ", res)
-      return res.data
+      return unwrapData<any[]>(res)
     })
     .catch((err) => {
       console.log("getPromotions err ", err)
@@ -681,7 +710,7 @@ export const getPromotionDetail = async (id: string) => {
   return await api.get(`/api/v1/customer/promotions/${id}`)
     .then((res) => {
       console.log("getPromotionDetail res ", res)
-      return res.data
+      return unwrapData(res)
     })
     .catch((err) => {
       console.log("getPromotionDetail err ", err)
@@ -690,14 +719,21 @@ export const getPromotionDetail = async (id: string) => {
 }
 
  
-export const validatePromo = async (promoCode: string, tripId: string) => {
+ export const validatePromo = async (
+  promoCode: string,
+  tripId: string,
+  options?: { passengerCount?: number; addOns?: { productId: string; quantity: number }[] },
+) => {
   return await api.post(`/api/v1/customer/promotions/validate`, {
     promoCode,
-    tripId
+    tripId,
+    ...options,
+  }, {
+    headers: getAuthHeaders(),
   })
     .then((res) => {
       console.log("validatePromo res ", res)
-      return res.data
+      return unwrapData(res)
     })
     .catch((err) => {
       console.log("validatePromo err ", err)
@@ -777,14 +813,22 @@ export const searchTrips = async (body: {
     })
 }
 
-// curl '/api/contents/faqs?category='
-export const getFaqs = async (category?: string) => {
-  return await api.get(`/api/contents/faqs`, {
-    params: category ? { category } : {}
+export const getFaqs = async (filters?: string | {
+  category?: string;
+  locale?: string;
+  limit?: number;
+  offset?: number;
+}) => {
+  const params = typeof filters === "string"
+    ? { category: filters }
+    : filters || {};
+
+  return await api.get(`/api/v1/customer/faqs`, {
+    params
   })
     .then((res) => {
       console.log("getFaqs res ", res)
-      return res.data
+      return unwrapData<any[]>(res)
     })
     .catch((err) => {
       console.log("getFaqs err ", err)

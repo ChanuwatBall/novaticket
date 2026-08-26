@@ -10,28 +10,26 @@ import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { MapPin, Clock, ChevronRight, CheckCircle2, MessageSquare, AlertCircle, Bus } from "lucide-react";
-import { bookingList, createComplaint } from "@/services/api";
+import { bookingList, createComplaint, getBusLicensePlate } from "@/services/api";
 import { toast } from "sonner";
 import moment from "moment";
 import { cn } from "@/lib/utils";
 import { t } from "i18next";
 
 type Ticket = {
-  id: string;
-  bookingReference: string;
-  origin: string;
-  destination: string;
-  date: string;
-  departureTime: string;
-  arrivalTime: string;
-  seats: string[];
-  status: string;
-  paymentStatus: string;
-  expiresAt: string;
-  total: number;
-  tripId?: string;
-  busPlate?: string;
-};
+    "id": string
+    "bookingNo":string
+    "status":string
+    "tripId": string
+    "routeName": string
+    "serviceDate": string
+    "scheduledDeparture": string
+    "scheduledArrival": string
+    "seatNumbers": string[]
+    "totalAmount": number
+    "paymentStatus": string
+    "createdAt": string
+}
 
 const Complaints = () => {
   const navigate = useNavigate();
@@ -46,19 +44,20 @@ const Complaints = () => {
   const [step, setStep] = useState(1); // 1: Select Ticket, 2: Write Complaint, 3: Success
   const [isGeneralComplaint, setIsGeneralComplaint] = useState(false);
   const [showTickets, setShowTickets] = useState(false);
+  const [busPlateOptions , setBusPlateOptions] = useState<String[]>([])
   
-  // Mock bus plates - ทะเบียนรถตัวอย่าง
-  const busPlateOptions = [
-    "ไม่ระบุ",
-    "ก 1234 กระบี่",
-    "ก 5678 พิษณุโลก",
-    "ก 9101 นครสวรรค์",
-    "ก 1112 อุตรดิตถ์",
-    "ก 1314 เพชรบูรณ์",
-    "ก 1516 แพร่",
-    "ก 1718 น่าน",
-    "ก 1920 สุโขทัย",
-  ];
+  // // Mock bus plates - ทะเบียนรถตัวอย่าง
+  // const busPlateOptions = [
+  //   "ไม่ระบุ",
+  //   "ก 1234 กระบี่",
+  //   "ก 5678 พิษณุโลก",
+  //   "ก 9101 นครสวรรค์",
+  //   "ก 1112 อุตรดิตถ์",
+  //   "ก 1314 เพชรบูรณ์",
+  //   "ก 1516 แพร่",
+  //   "ก 1718 น่าน",
+  //   "ก 1920 สุโขทัย",
+  // ];
 
 
 
@@ -76,7 +75,7 @@ const Complaints = () => {
     const fetchTickets = async () => {
       try {
         setLoading(true);
-        const res = await bookingList(1);
+        const res = await bookingList();
         if (res && res.data) {
           // Filter for paid/confirmed tickets
           const successful = res.data.filter((t: any) => t.paymentStatus === "paid" || t.status === "confirmed");
@@ -88,6 +87,9 @@ const Complaints = () => {
       } finally {
         setLoading(false);
       }
+      const plates = await getBusLicensePlate()
+      console.log("plates ",plates)
+      setBusPlateOptions(plates)
     };
     fetchTickets();
   }, []);
@@ -108,11 +110,12 @@ const Complaints = () => {
     setSubmitting(true);
     try {
       const payload = {
-        reporter_phone: phoneNumber,
-        complaint_text: complaintText,
-        vehicle_plate: busPlate || selectedTicket?.busPlate || "",
-        trip_id: selectedTicket?.tripId || null,
-        seat_code: selectedTicket ? selectedTicket.seats.join(", ") : ""
+        reporterPhone: phoneNumber,
+        complaintText: complaintText,
+        vehiclePlate: busPlate  || "",
+        tripId: selectedTicket?.tripId || null,
+        bookingNo: selectedTicket?.bookingNo,
+        seatCode: selectedTicket ? selectedTicket.seatNumbers.join(", ") : ""
       };
 
       const res = await createComplaint(payload);
@@ -235,22 +238,22 @@ const Complaints = () => {
                           <CardContent className="p-4">
                             <div className="flex justify-between items-start mb-2">
                               <div>
-                                <p className="text-[10px] font-bold text-slate-400">#{ticket.bookingReference}</p>
+                                <p className="text-[10px] font-bold text-slate-400">#{ticket.bookingNo}</p>
                                 <div className="flex items-center gap-1.5 mt-1 font-bold text-sm">
                                   <MapPin className="h-3.5 w-3.5 text-primary" />
-                                  {t(ticket.origin)} → {t(ticket.destination)}
+                                  {t(ticket?.routeName)}
                                 </div>
                               </div>
                               <Badge variant="outline" className="text-[10px] uppercase font-bold">
-                                {ticket.date}
+                                {ticket?.serviceDate}
                               </Badge>
                             </div>
                             <div className="flex items-center gap-3 text-xs text-muted-foreground">
                               <span className="flex items-center gap-1">
                                 <Clock className="h-3 w-3" />
-                                {ticket.departureTime}
+                                {moment(ticket.scheduledDeparture).format("HH:MM DD/MM")}
                               </span>
-                              <span>{t("ที่นั่ง")} {ticket.seats.join(", ")}</span>
+                              <span>{t("ที่นั่ง")} {ticket?.seatNumbers?.join(", ")}</span>
                             </div>
                           </CardContent>
                         </Card>
@@ -303,34 +306,34 @@ const Complaints = () => {
                 <CardContent className="p-0">
                   <div className="bg-primary/10 px-3 py-2 flex justify-between items-center">
                     <span className="text-[10px] font-black text-primary uppercase tracking-wider">{t("Ticket Info")}</span>
-                    <span className="text-[10px] font-bold text-primary/60">#{selectedTicket.bookingReference}</span>
+                    <span className="text-[10px] font-bold text-primary/60">#{selectedTicket.bookingNo}</span>
                   </div>
                   <div className="p-4 space-y-3">
                     <div className="flex justify-between items-center">
                       <div>
                         <p className="text-[10px] text-muted-foreground font-bold uppercase">{t("Route")}</p>
-                        <p className="text-sm font-black">{t(selectedTicket.origin)} → {t(selectedTicket.destination)}</p>
+                        <p className="text-sm font-black">{t(selectedTicket?.routeName)}</p>
                       </div>
                       <div className="text-right">
                         <p className="text-[10px] text-muted-foreground font-bold uppercase">{t("Date")}</p>
-                        <p className="text-sm font-black">{moment(selectedTicket.date).format('D MMM YYYY')}</p>
+                        <p className="text-sm font-black">{moment(selectedTicket.serviceDate).format('D MMM YYYY')}</p>
                       </div>
                     </div>
 
                     <div className="grid grid-cols-2 gap-4 py-3 border-y border-dashed">
                       <div>
                         <p className="text-[10px] text-muted-foreground font-bold uppercase">{t("Time")}</p>
-                        <p className="text-xs font-bold">{selectedTicket.departureTime} - {selectedTicket.arrivalTime}</p>
+                        <p className="text-xs font-bold">{moment(selectedTicket.scheduledDeparture).format('D MMM YYYY')} - {moment(selectedTicket.scheduledArrival).format('D MMM YYYY')}</p>
                       </div>
                       <div className="text-right">
                         <p className="text-[10px] text-muted-foreground font-bold uppercase">{t("Seats")}</p>
-                        <p className="text-xs font-bold text-primary">{selectedTicket.seats.join(", ")}</p>
+                        <p className="text-xs font-bold text-primary">{selectedTicket.seatNumbers.join(", ")}</p>
                       </div>
                     </div>
 
                     <div className="flex justify-between items-center pt-1">
                       <span className="text-xs font-bold text-muted-foreground">{t("ยอดชำระ")}</span>
-                      <span className="text-sm font-black text-primary">฿{selectedTicket.total}</span>
+                      <span className="text-sm font-black text-primary">฿{selectedTicket?.totalAmount}</span>
                     </div>
                   </div>
                 </CardContent>
@@ -348,7 +351,7 @@ const Complaints = () => {
                       <SelectValue placeholder={t("เลือกทะเบียนรถ")} />
                     </SelectTrigger>
                     <SelectContent className="max-h-[200px]">
-                      {busPlateOptions.map((plate) => (
+                      {busPlateOptions.map((plate:any) => (
                         <SelectItem key={plate} value={plate} className="text-sm">
                           {plate}
                         </SelectItem>

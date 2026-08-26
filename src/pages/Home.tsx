@@ -183,7 +183,7 @@ const Home = () => {
         console.error("Home company check failed", e)
       }
       try {
-        const data = await getPromotions({ memberOnly: "", visibility: "", routeId: "", dayOfWeek: "" });
+        const data = await getPromotions();
         if (data) {
           console.log("promotions ", data);
           setPromotions(data);
