@@ -89,7 +89,7 @@ type TicketDetail = {
     },
     "paymentMethod": "promptpay",
     "promoCode": null,
-    "discount": 0,
+    "discount": number,
     "origin": "สถานีขนส่งหมอชิต 2",
     "originProvinceId": "6cb9fa31-84d2-5aff-a29e-4558e580f993",
     "destination": "สถานีขนส่งเชียงใหม่ อาเขต",
@@ -440,9 +440,9 @@ const TicketDetail = () => {
             </div>
             <div className="flex items-center gap-2 text-lg font-bold">
               <MapPin className="h-5 w-5 shrink-0" />
-              {t(ticket.origin)} → {t(ticket.destination)}
+              {t(ticket.routeName)}
             </div>
-            <p className="text-sm opacity-80 mt-1">{ticket.routeName} · {ticket.vehicleType}</p>
+            <p className="text-sm opacity-80 mt-1">{ticket.vehiclePlate} · {ticket.vehicleType}</p>
           </div>
 
           {/* QR for upcoming */}
@@ -472,9 +472,9 @@ const TicketDetail = () => {
               <span className="text-muted-foreground">{t("วันที่เดินทาง")}</span>
               <span className="text-right font-medium">{ticket.serviceDate}</span>
               <span className="text-muted-foreground">{t("เวลาออก")}</span>
-              <span className="text-right font-medium">{ticket.scheduledDeparture} น.</span>
+              <span className="text-right font-medium">{ticket?.scheduledDeparture && moment(ticket?.scheduledDeparture).format("DD MMM HH:MM")} น.</span>
               <span className="text-muted-foreground">{t("เวลาถึง (โดยประมาณ)")}</span>
-              <span className="text-right font-medium">{ticket.scheduledArrival} น.</span>
+              <span className="text-right font-medium">{ticket.scheduledArrival && moment(ticket?.scheduledArrival).format("DD MMM HH:MM")} น.</span>
               <span className="text-muted-foreground">{t("จุดขึ้นรถ")}</span>
               <span className="text-right font-medium">{ticket.boardingPoint?.name}</span>
               <span className="text-muted-foreground">{t("จุดลงรถ")}</span>
@@ -495,9 +495,9 @@ const TicketDetail = () => {
               <span className="text-right font-medium">{ticket.vehicleType}</span>
               <span className="text-muted-foreground">{t("ทะเบียนรถ")}</span>
               <span className="text-right font-medium">{ticket.vehiclePlate}</span>
-              <span className="text-muted-foreground">{t("ที่นั่ง")}</span>x
+              <span className="text-muted-foreground">{t("ที่นั่ง")}</span>
               <span className="text-right font-medium">
-                {ticket.seats.join(", ")}
+                {ticket.seats && ticket.seats?.map((e)=>{return `${e?.seat_no} `})}
               </span>
             </div>
           </CardContent>
@@ -511,7 +511,7 @@ const TicketDetail = () => {
               {t("ผู้โดยสาร")} {ticket.passengers.length} {t("คน")}
             </h3>
             <div className="space-y-3">
-              {ticket.passengers.map((p, i) => (
+              {ticket && ticket.passengers && ticket.passengers.map((p, i) => (
                 <div key={i} className="rounded-lg bg-muted/50 p-3 space-y-1.5">
                   <div className="flex items-center justify-between">
                     <span className="font-semibold text-sm">{p.full_name}</span>
@@ -596,19 +596,19 @@ const TicketDetail = () => {
                   <span className="text-right font-medium text-success">{ticket.promoCode}</span>
                 </>
               )}
-              {paymentSummary.discount > 0 && (
+              {ticket.discount > 0 && (
                 <>
                   <span className="text-muted-foreground">{t("ส่วนลด")}</span>
-                  <span className="text-right font-medium text-success">-฿{paymentSummary.discount.toLocaleString()}</span>
+                  <span className="text-right font-medium text-success">-฿{ticket.discount && (ticket?.discount).toFixed(2)}</span>
                 </>
               )}
               <span className="text-muted-foreground">{t("ค่าธรรมเนียม")}</span>
-              <span className="text-right font-medium">฿{paymentSummary.feeTotal.toLocaleString()}</span>
+              <span className="text-right font-medium">฿{ticket?.fee&&(ticket?.fee).toFixed(2)}</span>
             </div>
             <Separator />
             <div className="flex justify-between font-bold text-lg">
               <span>{t("ยอดสุทธิ")}</span>
-              <span className="text-primary">฿{netTotal.toLocaleString()}</span>
+              <span className="text-primary">฿{ticket?.totalAmount&&ticket?.totalAmount.toFixed(2)}</span>
             </div>
           </CardContent>
         </Card>
