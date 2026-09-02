@@ -19,7 +19,7 @@ export const apiBaseUrl =
   typeof window !== "undefined" &&
   !Capacitor.isNativePlatform() &&
   isLocalOrLanHost(window.location.hostname)
-    ? "http://localhost:3001"
+    ? "https://paso-dice-therapy-turbo.trycloudflare.com"
     : envBaseUrl;
 
 
@@ -162,7 +162,7 @@ export type PublicCompanyConfig = {
 };
 
 export const getConfig = async (): Promise<PublicCompanyConfig> => {
-  const configUrl = import.meta.env.VITE_CONFIG_API_URL?.trim() || "http://localhost:3001/api/v1/config";
+  const configUrl = import.meta.env.VITE_CONFIG_API_URL?.trim() || "https://paso-dice-therapy-turbo.trycloudflare.com/api/v1/config";
   const response = await axios.get<{ data: PublicCompanyConfig }>(configUrl);
   const config = response.data?.data;
 
