@@ -18,7 +18,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { toast } from "sonner";
 import MealModal from "./MealModal";
 import { t } from "i18next";
-import { supabase } from "@/supabase/client";
+// import { supabase } from "@/supabase/client";
 
 interface PassengerInfoSectionProps {
   onContinue: () => void;

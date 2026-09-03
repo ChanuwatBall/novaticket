@@ -21,7 +21,7 @@ import liff from "@line/liff";
 import moment from "moment";
 import { statusConfig } from "./MyTickets";
 import { t } from "i18next";
-import { supabase } from "@/supabase/client";
+// import { supabase } from "@/supabase/client";
 
 const Home = () => {
   const store = useBookingStore();
@@ -161,27 +161,27 @@ const Home = () => {
         return;
       }
 
-      try {
-        const { data: company, error } = await supabase
-          .from('companies')
-          .select(`
-            *,
-            company_sales_settings (
-              *
-            )
-          `)
-          .eq('name', import.meta.env.VITE_COMPANY_NAME)
-          .single()
+      // try {
+      //   const { data: company, error } = await supabase
+      //     .from('companies')
+      //     .select(`
+      //       *,
+      //       company_sales_settings (
+      //         *
+      //       )
+      //     `)
+      //     .eq('name', import.meta.env.VITE_COMPANY_NAME)
+      //     .single()
 
-        if (error) {
-          console.error("Failed to load company", error)
-        } else {
-          localStorage.setItem("company", JSON.stringify(company))
-          console.log("company ", company)
-        }
-      }catch(e){
-        console.error("Home company check failed", e)
-      }
+      //   if (error) {
+      //     console.error("Failed to load company", error)
+      //   } else {
+      //     localStorage.setItem("company", JSON.stringify(company))
+      //     console.log("company ", company)
+      //   }
+      // }catch(e){
+      //   console.error("Home company check failed", e)
+      // }
       try {
         const data = await getPromotions();
         if (data) {
@@ -266,12 +266,12 @@ const Home = () => {
   }, [store.originProvinceId, store.destinationProvinceId]);
 
   const getIntroRoutes = async () => {
-    const { data: routes, error } = await supabase.from('routes').select('*')
-    if (error) {
-      console.error("Error fetching routes:", error);
-      return;
-    }
-    setIntroduceRoute(routes);
+    // const { data: routes, error } = await supabase.from('routes').select('*')
+    // if (error) {
+    //   console.error("Error fetching routes:", error);
+    //   return;
+    // }
+    // setIntroduceRoute(routes);
   }
 
 
@@ -404,50 +404,50 @@ const Home = () => {
     setDestination(destinationProvince.name);
 
     try {
-      const matchedRouteId = route.id
-        || await supabase
-          .from('routes')
-          .select('id')
-          .eq('origin_id', originProvince.id)
-          .eq('destination_id', destinationProvince.id)
-          .single()
-          .then((response) => {
-            if (response.error) {
-              return null;
-            }
-            return response.data?.id || null;
-          });
+      // const matchedRouteId = route.id
+      //   || await supabase
+      //     .from('routes')
+      //     .select('id')
+      //     .eq('origin_id', originProvince.id)
+      //     .eq('destination_id', destinationProvince.id)
+      //     .single()
+      //     .then((response) => {
+      //       if (response.error) {
+      //         return null;
+      //       }
+      //       return response.data?.id || null;
+      //     });
 
-      if (!matchedRouteId) {
-        alert("ไม่พบเส้นทางสำหรับการจอง");
-        return;
-      }
+      // if (!matchedRouteId) {
+      //   alert("ไม่พบเส้นทางสำหรับการจอง");
+      //   return;
+      // }
 
-      const stops = await getBusStops(matchedRouteId, {
-        originProvinceId: originProvince.id,
-        destinationProvinceId: destinationProvince.id,
-        origin: originProvince.name,
-        destination: destinationProvince.name,
-      });
+      // const stops = await getBusStops(matchedRouteId, {
+      //   originProvinceId: originProvince.id,
+      //   destinationProvinceId: destinationProvince.id,
+      //   origin: originProvince.name,
+      //   destination: destinationProvince.name,
+      // });
 
-      const originStops = (stops || []).filter(
-        (r: any) => r.route_id?.origin_id === originProvince.id && (r.type === "pickup" || r.type === "stop")
-      );
-      const destinationStops = (stops || []).filter(
-        (r: any) => r.route_id?.destination_id === destinationProvince.id && (r.type === "dropoff" || r.type === "stop")
-      );
+      // const originStops = (stops || []).filter(
+      //   (r: any) => r.route_id?.origin_id === originProvince.id && (r.type === "pickup" || r.type === "stop")
+      // );
+      // const destinationStops = (stops || []).filter(
+      //   (r: any) => r.route_id?.destination_id === destinationProvince.id && (r.type === "dropoff" || r.type === "stop")
+      // );
 
-      const firstBoardingPoint = originStops[0];
-      const lastDropOffPoint = destinationStops[destinationStops.length - 1];
+      // const firstBoardingPoint = originStops[0];
+      // const lastDropOffPoint = destinationStops[destinationStops.length - 1];
 
-      if (!firstBoardingPoint || !lastDropOffPoint) {
-        alert("ไม่พบจุดขึ้นหรือจุดลงรถสำหรับเส้นทางนี้");
-        return;
-      }
+      // if (!firstBoardingPoint || !lastDropOffPoint) {
+      //   alert("ไม่พบจุดขึ้นหรือจุดลงรถสำหรับเส้นทางนี้");
+      //   return;
+      // }
 
-      setBusStops(stops || []);
-      store.setBoardingPoint(firstBoardingPoint);
-      store.setDropOffPoint(lastDropOffPoint);
+      // setBusStops(stops || []);
+      // store.setBoardingPoint(firstBoardingPoint);
+      // store.setDropOffPoint(lastDropOffPoint);
       store.setTravelDate(format(today, "yyyy-MM-dd"));
       navigate("/booking");
     } catch (error) {

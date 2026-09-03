@@ -1,4 +1,4 @@
-import { supabase } from "@/supabase/client";
+// import { supabase } from "@/supabase/client";
 import type { PublicCompanyConfig } from "@/services/api";
 
 const COMPANY_STORAGE_KEY = "company";
@@ -41,22 +41,22 @@ export const loadCompany = async () => {
   const companyName = import.meta.env.VITE_COMPANY_NAME;
   if (!companyName) return null;
 
-  const { data: company, error } = await supabase
-    .from("companies")
-    .select(`
-      *,
-      company_sales_settings (
-        *
-      )
-    `)
-    .eq("name", companyName)
-    .single();
+  // const { data: company, error } = await supabase
+  //   .from("companies")
+  //   .select(`
+  //     *,
+  //     company_sales_settings (
+  //       *
+  //     )
+  //   `)
+  //   .eq("name", companyName)
+  //   .single();
 
-  if (error) {
-    console.error("Failed to load company", error);
-    return null;
-  }
+  // if (error) {
+  //   console.error("Failed to load company", error);
+  //   return null;
+  // }
 
-  storeCompany(company);
-  return company;
+  // storeCompany(company);
+  // return company;
 };
