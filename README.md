@@ -66,6 +66,30 @@ The app loads the tenant-specific LIFF ID from `GET /api/v1/config` before calli
 
 Simply open [Lovable](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and click on Share -> Publish.
 
+## Run with Docker
+
+Build and start the production container with Docker Compose:
+
+```sh
+docker compose up --build
+```
+
+Open `http://localhost:8080`. To use another host port, set `APP_PORT`:
+
+```sh
+APP_PORT=3000 docker compose up --build
+```
+
+The Vite application is built with `.env.production`. Nginx serves the static app,
+falls back to `index.html` for client-side routes, and proxies `/api/*` requests to
+the production API.
+
+Stop and remove the container with:
+
+```sh
+docker compose down
+```
+
 ## Can I connect a custom domain to my Lovable project?
 
 Yes, you can!
