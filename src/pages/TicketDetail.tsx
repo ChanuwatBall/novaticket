@@ -336,11 +336,10 @@ const TicketDetail = () => {
     setIsCheckinLoading(true);
     try {
       const res = await checkinSelf({
-        ticketNumber: ticket.bookingNo,
-        qrCode: qr
+        bookingId: ticket.id 
       });
       console.log("Check-in result:", res);
-      if (res.status === "success" || res.success) {
+      if (res.status === "success" || res.data?.checkedIn ) {
         toast({
           title: t("เช็คอินสำเร็จ"),
           description: t("ขอให้คุณมีความสุขกับการเดินทาง"),

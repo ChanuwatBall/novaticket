@@ -660,8 +660,8 @@ export const cancelCharge = (chargeId: string) => {
     })
 }
 
-export const checkinSelf = async (body: { ticketNumber: string, qrCode: string }) => {
-  return await api.post("/api/checkin/self", body, {
+export const checkinSelf = async (body: { bookingId: string }) => {
+  return await api.post("/api/v1/customer/checkin/self", body, {
     headers: getAuthHeaders()
   })
     .then((res) => {

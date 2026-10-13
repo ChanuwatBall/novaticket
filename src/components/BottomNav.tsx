@@ -5,7 +5,7 @@ import { t } from 'i18next';
 
 const navItems = [
   { to: '/', label: t("หน้าแรก"), icon: Home },
-  { to: '/track', label: t("ติดตามรถ"), icon: MapPinned },
+  // { to: '/track', label: t("ติดตามรถ"), icon: MapPinned },
   // { to: '/ticket', label: t("ค้นหา"), icon: Search },
   { to: '/promotions', label: t("โปรโมชั่น"), icon: Tag },
   { to: '/my-tickets', label: t("ตั๋วของฉัน"), icon: Ticket },
