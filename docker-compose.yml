@@ -1,0 +1,15 @@
+services:
+  web-1:
+    image: ${WEB_IMAGE:-nova-ticket-web:local}
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "${APP_PORT_1:-8083}:80"
+    restart: unless-stopped
+
+  web-2:
+    image: ${WEB_IMAGE:-nova-ticket-web:local}
+    ports:
+      - "${APP_PORT_2:-8084}:80"
+    restart: unless-stopped

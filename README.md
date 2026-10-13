@@ -66,6 +66,21 @@ The app loads the tenant-specific LIFF ID from `GET /api/v1/config` before calli
 
 Simply open [Lovable](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and click on Share -> Publish.
 
+### Docker Compose
+
+The Compose configuration runs two frontend replicas from the same image:
+`web-1` listens on port `8083` and `web-2` listens on port `8084` by default.
+
+```sh
+docker compose up --build -d
+```
+
+Set `APP_PORT_1` and `APP_PORT_2` to publish the replicas on different ports:
+
+```sh
+APP_PORT_1=8080 APP_PORT_2=8081 docker compose up --build -d
+```
+
 ## Can I connect a custom domain to my Lovable project?
 
 Yes, you can!
