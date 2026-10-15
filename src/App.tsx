@@ -32,7 +32,7 @@ import BottomNav from "./components/BottomNav";
 import PromotionDetail from "./pages/PromotionDetail"; 
 import TrackBus from "./pages/TrackBus";
 import { getConfig, loginWithLine, refreshToken } from "./services/api";
-import { applyPreferences, configToPreferences, getStoredPreferences, storePreferences } from "./lib/preferences";
+import { applyPreferences, configToPreferences, storePreferences } from "./lib/preferences";
 import { getStoredCompany, storeCompanyConfig } from "./lib/company";
 
 const queryClient = new QueryClient();
@@ -96,16 +96,16 @@ const App = () => {
         !hasRemoteVersion ||
         remoteVersion > localVersion;
 
+      // Branding (including the browser tab title) must reflect the response
+      // from the configuration API on every app launch.  A branding change can
+      // otherwise remain stuck in localStorage when the backend does not bump
+      // config_version alongside the database update.
+      const preferences = configToPreferences(config);
+      storePreferences(preferences);
+      applyPreferences(preferences);
+
       if (shouldUpdateConfig) {
         storeCompanyConfig(config);
-        const preferences = configToPreferences(config);
-        storePreferences(preferences);
-        applyPreferences(preferences);
-      } else if (!getStoredPreferences()) {
-        // Recover preferences if that storage entry was cleared independently.
-        const preferences = configToPreferences(storedCompany);
-        storePreferences(preferences);
-        applyPreferences(preferences);
       }
 
       return config;
