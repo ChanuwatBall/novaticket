@@ -11,6 +11,7 @@ import { cn } from "@/lib/utils";
 import { useTranslation } from "react-i18next";
 import type { AppLanguage, LanguageOption } from "@/i18n/resources";
 import { getLanguageOptions, LANGUAGE_RESOURCES_UPDATED_EVENT } from "@/i18n/remoteResources";
+import { useAppTitle } from "@/hooks/use-app-title";
 
 const menuItems = [
   { label: "ตั๋วของฉัน", icon: Ticket, to: "/my-tickets", key: "tickets" },
@@ -36,6 +37,7 @@ const Profile = () => {
   const { i18n, t } = useTranslation();
   const [userMe, setUserMe] = useState<UserMe | null>(null)
   const [languageOptions, setLanguageOptions] = useState<LanguageOption[]>(() => getLanguageOptions());
+  const appTitle = useAppTitle();
 
 
   const [loading, setLoading] = useState(true);
@@ -119,7 +121,7 @@ const Profile = () => {
       <header className="bg-primary text-primary-foreground px-4 py-3 flex items-center gap-3 shadow-md sticky top-0 z-50">
         <Link to="/" className="flex items-center gap-2">
           <Bus className="h-6 w-6" />
-          <h1 className="text-lg font-bold tracking-tight">Nova Express</h1>
+          <h1 className="text-lg font-bold tracking-tight">{appTitle}</h1>
         </Link>
       </header>
 

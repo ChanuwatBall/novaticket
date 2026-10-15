@@ -8,10 +8,12 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import liff from "@line/liff";
 import { register, loginWithLine } from "@/services/api";
+import { useAppTitle } from "@/hooks/use-app-title";
 
 const Register = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
+  const appTitle = useAppTitle();
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -37,7 +39,7 @@ const Register = () => {
         const res = await loginWithLine({ lineAccessToken: ltoken });
         if (res && res.accessToken) {
           localStorage.setItem("user", JSON.stringify(res));
-          toast({ title: "เชื่อมต่อ LINE สำเร็จ!", description: "ยินดีต้อนรับสู่ Nova Express" });
+          toast({ title: "เชื่อมต่อ LINE สำเร็จ!", description: `ยินดีต้อนรับสู่ ${appTitle}` });
           navigate("/profile");
         } else {
           toast({ title: "ลงทะเบียนด้วย LINE ไม่พร้อมใช้งาน", description: res?.message, variant: "destructive" });
@@ -71,7 +73,7 @@ const Register = () => {
 
       if (res && res.accessToken) {
         localStorage.setItem("user", JSON.stringify(res));
-        toast({ title: "ลงทะเบียนสำเร็จ!", description: "ยินดีต้อนรับสู่ Nova Express" });
+        toast({ title: "ลงทะเบียนสำเร็จ!", description: `ยินดีต้อนรับสู่ ${appTitle}` });
         navigate("/profile");
       } else {
         toast({ 
@@ -109,7 +111,7 @@ const Register = () => {
             <div className="mx-auto h-16 w-16 rounded-full bg-primary/10 flex items-center justify-center mb-2">
               <Bus className="h-8 w-8 text-primary" />
             </div>
-            <CardTitle className="text-xl">สร้างบัญชี Nova Express</CardTitle>
+            <CardTitle className="text-xl">สร้างบัญชี {appTitle}</CardTitle>
             <p className="text-sm text-muted-foreground mt-1">สมัครสมาชิกเพื่อสะสมแต้มและรับสิทธิพิเศษ</p>
           </CardHeader>
           <CardContent className="space-y-4">

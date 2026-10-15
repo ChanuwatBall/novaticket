@@ -31,6 +31,7 @@ export const configToPreferences = (config: PublicCompanyConfig): AppPreferences
 });
 
 const PREFERENCES_STORAGE_KEY = "preferences";
+export const PREFERENCES_UPDATED_EVENT = "preferencesUpdated";
 
 const DEFAULT_TITLE = "NOVA Express";
 const DEFAULT_PRIMARY = "#144986";
@@ -138,6 +139,7 @@ export const getStoredPreferences = (): AppPreferences | null => {
 
 export const storePreferences = (preferences: AppPreferences) => {
   localStorage.setItem(PREFERENCES_STORAGE_KEY, JSON.stringify(preferences));
+  window.dispatchEvent(new Event(PREFERENCES_UPDATED_EVENT));
 };
 
 export const applyPreferences = (preferences?: AppPreferences | null) => {
@@ -157,6 +159,18 @@ export const applyPreferences = (preferences?: AppPreferences | null) => {
   const accentHsl = hexToHslString(accentHex);
 
   document.title = title;
+
+  document.querySelectorAll<HTMLMetaElement>(
+    'meta[property="og:title"], meta[name="twitter:title"], meta[name="application-name"], meta[name="author"]',
+  ).forEach((meta) => {
+    meta.content = title;
+  });
+
+  document.querySelectorAll<HTMLMetaElement>(
+    'meta[name="description"], meta[property="og:description"], meta[name="twitter:description"]',
+  ).forEach((meta) => {
+    meta.content = `จองตั๋วรถโดยสารออนไลน์ง่ายๆ กับ ${title}`;
+  });
 
   if (iconUrl) {
     let favicon = document.querySelector<HTMLLinkElement>('link[rel="icon"]');
